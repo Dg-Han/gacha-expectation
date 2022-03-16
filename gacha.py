@@ -1,23 +1,5 @@
 import random
 
-def prob(n,p,mode,most=0,least=0):
-    if mode=='1' or 'step' or 'ys' or 'mrfz':
-        if mode=='ys':
-            return prob_ys(n)
-        if mode=='mrfz':
-            return prob_mrfz(n)
-        else:
-            if n<=least:
-                return p
-            else:
-                return (1-p)*(n-least)/(most-least)+p
-    if mode=='2' or 'bound':
-        if n<most:
-            return p
-        else:
-            return 1
-    if mode=='3' or 'unlimit':
-        return p
 '''
 def gacha(n,mode,times=100000):
     if mode=='1' or 'step' or 'ys' or 'mrfz':
@@ -52,7 +34,7 @@ def gacha(n,mode,times=100000):
         for j in range(n):
             insur+=1
             cache=random.random()
-
+'''
 def prob_ys(n):
     if n<=73:
         return 0.006
@@ -64,36 +46,91 @@ def prob_mrfz(n):
         return 0.02
     else:
         return 0.02*n-0.98                          #0.02*(n-50)+0.02
-'''
-def lottery_ys(n,e=2,times=100000):
-    s=0                                             
-    up=dict()
-    for i in range(times):                          #下一个狗哥入场
-        insur=0                                     #小保底计数器
-        c=0                                         #大保底计数器清零
-        count=0                                     #抽到up个数
-        for j in range(n):
-            insur+=1                                #保底计数器
-            cache=random.random()                   #抽卡！
-            if cache<prob_ys(insur):                #抽中五星
-                if not c:                           #非大保底
-                    if cache<prob_ys(insur)/2:      #直击up
-                        count+=1                    #up+1
+
+
+class step():
+    def __init__(self,p,p_up,thres,most,*args,**kwargs):
+        '''
+        p:最高稀有度出率
+        p_up:up占最高稀有度比例
+        thres:触发保底机制下限
+        most:必出抽数
+        '''
+        step.p=p
+        step.p_up=p_up
+        step.thres=thres
+        if most>1:
+            step.most=most
+        else:
+            step.most=threshold+(1-p)*most
+
+    def prob(self,n):
+        if n<self.thres:
+            return self.p
+        else:
+            return (1-self.p)*(n-self.thres)/(self.most-self.thres)+self.p
+
+    def smlt(self,n,e,times):
+        s=0
+        up=dict()
+        for i in range(times):                              #新狗哥入场
+            insur=False                                     #非酋计数器（大保底是否可用）
+            turn=0                                          #小保底计数器
+            count=0                                         #up计数器
+            for j in range(n):
+                turn+=1
+                cache=random.random()                       #抽卡！
+                if cache<self.prob(turn):                   #抽中五星
+                    if insur:                               #非酋的强运！（大保底）
+                        count+=1
+                        insur=False                         #大保底重置
+                    elif cache<self.prob(turn)*self.p_up:   #直击up！
+                        count+=1
+                    else:                                   #大保底人（悲
+                        insur=True                          #非酋复活甲（大保底激活）
+                        s+=1                                #歪计数器+1
+                    turn=0                                  #新轮回开始（保底计数器清零）
+            up[count]=up.get(count,0)+1
+        result=times
+        for i in range(e):
+            result-=up.get(i,0)
+        return eval('%.4f'%(result/times))
+
+    def output_list(self,up):
+        for i in sorted(up.keys()):
+            print(i,up[i])
+
+class bound():
+    def __init__(self,p,p_up,most,*args,**kwargs):
+        self.p=p
+        self.p_up=p_up
+        self.most=most
+
+    def smlt(self,n,e,times):
+        s=0
+        up=dict()
+        for i in range(times):
+            count=0
+            c=0
+            turn=0
+            for j in range(n):
+                turn+=1
+                cache=random.random()
+                if cache<self.p:
+                    if cache<self.p_up:
+                        count+=1
                     else:
-                        c+=1                        #触发大保底
-                        s+=1                        #歪计数器+1
-                else:
-                    count+=1                        #大保底人
-                    c=0                             #大保底清除
-                insur=0                             #保底计数器清零
-        up[count]=up.get(count,0)+1
-    result=times
-    for i in range(e):
-        result-=up.get(i,0)
-    return eval('%.4f'%(result/times))
-    #print('%.4f'%(s/times))
-    #for i in sorted(up.keys()):
-    #    print(i,up[i])
+                        s+=1
+            up[count]=up.get(count,0)+1
+        for i in range(e):
+            result-=up.get(i,0)
+        return eval('%.4f'%(result/times))
+
+    def prob(self,n):
+        if n<self.most:
+            return 1-(1-self.p_up)**n
+        else:
+            return 0
 
 def lottery_mrfz(n,up=1,times=100000):
     s=0
@@ -143,19 +180,16 @@ def lottery_mrfz(n,up=1,times=100000):
         #print('%.4f'%(time/times))
         return time/times
 
-def beta():
-    mode=input('请输入希望模拟抽卡的游戏首字母或抽卡类型:')
-    lottery(mode)
-
 if __name__=="__main__":
-    print('欢迎使用原神抽卡模拟计算器(ver 1.0)！')
+    print('欢迎使用原神抽卡模拟计算器(ver 1.1)！')
+    ys=step(0.006,0.5,73,90)
     b1=True
     while b1:
         e=eval(input('请输入up目标命座（默认初始new，若非new则请输入目标命座-当前命座-1）:'))
         b2=True
         while b2:
             n=eval(input('请输入计划抽数:'))
-            print('抽到up%d命的概率是 %.2f %%.'%(e,100*lottery_ys(n,e+1)))
+            print('抽到up%d命的概率是 %.2f %%.'%(e,100*ys.smlt(n,e+1,100000)))
             cache=input('是否继续(y/n):')
             if cache=='n':
                 b1=False
@@ -166,13 +200,14 @@ if __name__=="__main__":
                     b2=False
 
 '''
-p=[]
+p_ys=[]
+ys=step(0.006,0.5,73,90)
 for i in range(360):
-    p.append(lottery_ys(i))
-    print('%3d %.5f'%(i,lottery_ys(i)))
+    p.append(ys(i).smlt(n,2,100000))
+    print('%3d %.5f'%(i,p[-1]))
 print(p)
 
-p=[]
+p_mrfz=[]
 for i in range(1,401):
     p.append(lottery_mrfz(i,2))
     print('%3d %.5f'%(i,lottery_mrfz(i,2)))
