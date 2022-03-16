@@ -49,16 +49,18 @@ def prob_mrfz(n):
 
 
 class step():
-    def __init__(self,p,p_up,thres,most,*args,**kwargs):
+    def __init__(self,p,p_up,thres,most,mg,*args,**kwargs):
         '''
         p:最高稀有度出率
         p_up:up占最高稀有度比例
         thres:触发保底机制下限
         most:必出抽数
+        mg:是否有大保底 (minimum guarantee)
         '''
         step.p=p
         step.p_up=p_up
         step.thres=thres
+        step.mg=mg
         if most>1:
             step.most=most
         else:
@@ -86,7 +88,7 @@ class step():
                         insur=False                         #大保底重置
                     elif cache<self.prob(turn)*self.p_up:   #直击up！
                         count+=1
-                    else:                                   #大保底人（悲
+                    elif self.mg:                           #大保底人（如果有的话悲
                         insur=True                          #非酋复活甲（大保底激活）
                         s+=1                                #歪计数器+1
                     turn=0                                  #新轮回开始（保底计数器清零）
@@ -182,7 +184,7 @@ def lottery_mrfz(n,up=1,times=100000):
 
 if __name__=="__main__":
     print('欢迎使用原神抽卡模拟计算器(ver 1.1)！')
-    ys=step(0.006,0.5,73,90)
+    ys=step(0.006,0.5,73,90,True)
     b1=True
     while b1:
         e=eval(input('请输入up目标命座（默认初始new，若非new则请输入目标命座-当前命座-1）:'))
@@ -201,7 +203,7 @@ if __name__=="__main__":
 
 '''
 p_ys=[]
-ys=step(0.006,0.5,73,90)
+ys=step(0.006,0.5,73,90,True)
 for i in range(360):
     p.append(ys(i).smlt(n,2,100000))
     print('%3d %.5f'%(i,p[-1]))
