@@ -7,7 +7,7 @@ version1.1
 Update: 更改了程序结构，在原有内容的基础上增加了对界限触发可变概率保底和固定概率有保底的抽卡模型的支持<br>
 现在在主体程序结束运行后（即是否继续后选择n后）可以在IDE内输入
 ```
-step(p,p_up,thres,most).smlt(n,e,times)
+step(p,p_up,thres,most,mg).smlt(n,e,times)
 ```
 >p为最高稀有度角色出率<br>
 >p_up为up角色占最高稀有度角色出率的比例<br>
@@ -15,6 +15,7 @@ step(p,p_up,thres,most).smlt(n,e,times)
 >most为必出抽数<br>
 >>也可输入触发保底机制后每次递增的概率<br>
 >
+>mg为是否有大保底（原神限定池机制）
 >n为总抽数<br>
 >e为目标up数<br>
 >times为模拟次数<br>
