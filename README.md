@@ -15,7 +15,7 @@ step(p,p_up,thres,most,mg).smlt(n,e,times)
 >most为必出抽数<br>
 >>也可输入触发保底机制后每次递增的概率<br>
 >
->mg为是否有大保底（原神限定池机制）
+>mg为是否有大保底（原神限定池机制）<br>
 >n为总抽数<br>
 >e为目标up数<br>
 >times为模拟次数<br>
