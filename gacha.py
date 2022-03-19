@@ -26,14 +26,6 @@ def gacha(n,mode,times=100000):
     if mode=='4' or 'collection':
         p=1/eval(print('请输入套装收藏品件数:'))
         r=eval(input("请输入重复收藏品兑换新收藏品的比例:"))
-        
-    for i in range(times):
-        insur=0
-        c=0
-        count=0
-        for j in range(n):
-            insur+=1
-            cache=random.random()
 '''
 def prob_ys(n):
     if n<=73:
@@ -49,22 +41,24 @@ def prob_mrfz(n):
 
 
 class step():
-    def __init__(self,p,p_up,thres,most,mg,*args,**kwargs):
+    def __init__(self,p,p_up,ups,thres,most,mg,*args,**kwargs):
         '''
         p:最高稀有度出率
         p_up:up占最高稀有度比例
+        ups:up角色数量
         thres:触发保底机制下限
         most:必出抽数
-        mg:是否有大保底 (minimum guarantee)
+        mg:大保底歪几必出 (minimum guarantee); 0为无大保底机制
         '''
         step.p=p
         step.p_up=p_up
+        step.ups=ups
         step.thres=thres
         step.mg=mg
         if most>1:
             step.most=most
         else:
-            step.most=threshold+(1-p)*most
+            step.most=thres+(1-p)*most
 
     def prob(self,n):
         if n<self.thres:
@@ -72,30 +66,51 @@ class step():
         else:
             return (1-self.p)*(n-self.thres)/(self.most-self.thres)+self.p
 
-    def smlt(self,n,e,times):
+    def smlt(self,n,e,times=100000):
+        '''
+        n为总抽数
+        e为期望抽卡结果（数组形式表示）
+        times为重复模拟次数
+        '''
         s=0
         up=dict()
         for i in range(times):                              #新狗哥入场
-            insur=False                                     #非酋计数器（大保底是否可用）
+            insur=0                                         #非酋计数器（大保底计数器）
             turn=0                                          #小保底计数器
-            count=0                                         #up计数器
+            count=[0 for i in range(self.ups)]              #up计数器
             for j in range(n):
                 turn+=1
+                pt=self.prob(turn)
                 cache=random.random()                       #抽卡！
-                if cache<self.prob(turn):                   #抽中五星
-                    if insur:                               #非酋的强运！（大保底）
-                        count+=1
-                        insur=False                         #大保底重置
-                    elif cache<self.prob(turn)*self.p_up:   #直击up！
-                        count+=1
-                    elif self.mg:                           #大保底人（如果有的话悲
-                        insur=True                          #非酋复活甲（大保底激活）
-                        s+=1                                #歪计数器+1
+                if cache<pt:                                #抽中五星
+                    mg_b=True
+                    for k in range(self.ups):
+                        if k<=cache*self.ups/pt/self.p_up<(k+1):
+                            count[k]+=1
+                            insur=0
+                            mg_b=False
+                            break
+                    if self.mg and mg_b:
+                        if insur==self.mg:                  #非酋的强运！（大保底）
+                            for k in range(self.ups):
+                                if (k+(1-k)*pt)<=cache*self.ups/self.p_up<(k+1-k*pt):
+                                    count[k]+=1
+                                    break
+                            insur=0                         #大保底重置
+                        else:
+                            insur+=1                        #非酋复活甲（大保底激活）
+                            s+=1                            #歪计数器+1                          
                     turn=0                                  #新轮回开始（保底计数器清零）
+            count=tuple(count)
             up[count]=up.get(count,0)+1
         result=times
-        for i in range(e):
-            result-=up.get(i,0)
+
+        for key in up.keys():
+            for i in range(len(key)):
+                if key[i]<e[i]:
+                    result-=up[key]
+                    break
+        
         return eval('%.4f'%(result/times))
 
     def output_list(self,up):
@@ -134,64 +149,18 @@ class bound():
         else:
             return 0
 
-def lottery_mrfz(n,up=1,times=100000):
-    s=0
-    if up==1:
-        result=dict()
-        for i in range(times):
-            insur=0
-            count=0
-            for j in range(n):
-                insur+=1
-                cache=random.random()
-                if cache<prob_mrfz(insur):
-                    if cache<prob_mrfz(insur)/2:
-                        count+=1
-                    else:
-                        s+=1
-                    insur=0
-            result[count]=result.get(count,0)+1
-        for i in sorted(result.keys()):
-            print(i,result[i])
-    if up==2:
-        time=0
-        for i in range(times):
-            insur=0
-            up1=0
-            up2=0
-            for j in range(n):
-                insur+=1
-                cache=random.random()
-                if cache<prob_mrfz(insur):
-                    if cache<prob_mrfz(insur)*0.7:
-                        if cache<prob_mrfz(insur)*0.35:
-                            up1+=1
-                        else:
-                            up2+=1
-                    else:
-                        s+=1
-                    insur=0
-                if j<300:
-                    if up1 and up2:
-                        time+=1
-                        break
-                else:
-                    if up1 or up2:
-                        time+=1
-                        break
-        #print('%.4f'%(time/times))
-        return time/times
-
 if __name__=="__main__":
-    print('欢迎使用原神抽卡模拟计算器(ver 1.1)！')
-    ys=step(0.006,0.5,73,90,True)
+    print('欢迎使用原神抽卡模拟计算器(ver 1.2)！')
+    ys=step(0.006,0.5,1,73,90,1)
+    mrfz1=step(0.02,0.5,1,50,99,0)
+    mrfz2=step(0.02,0.7,2,50,99,0)
     b1=True
     while b1:
         e=eval(input('请输入up目标命座（默认初始new，若非new则请输入目标命座-当前命座-1）:'))
         b2=True
         while b2:
             n=eval(input('请输入计划抽数:'))
-            print('抽到up%d命的概率是 %.2f %%.'%(e,100*ys.smlt(n,e+1,100000)))
+            print('抽到up%d命的概率是 %.2f %%.'%(e,100*ys.smlt(n,[e+1])))
             cache=input('是否继续(y/n):')
             if cache=='n':
                 b1=False
@@ -200,6 +169,7 @@ if __name__=="__main__":
                 cache=input('是否需要更改命座数(y/n):')
                 if cache=='y':
                     b2=False
+    
 
 '''
 p_ys=[]
