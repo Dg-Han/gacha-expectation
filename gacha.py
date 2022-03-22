@@ -2,24 +2,6 @@ import random
 
 '''
 def gacha(n,mode,times=100000):
-    if mode=='1' or 'step' or 'ys' or 'mrfz':
-        if mode=='ys':
-            p=0.006
-            least=73
-            most=90
-            target=0.5
-        if mode=='mrfz':
-            p=0.02
-            least=50
-            most=99
-            target=0.35
-        else:
-            p=eval(input("请输入未触发保底机制时每抽出货的概率:"))
-            least=eval(input("请输入触发保底机制的抽数:"))
-            most=eval(input("请输入100%抽中的抽数:"))
-    if mode=='2' or 'bound':
-        p=eval(input('请输入每抽出货的概率:'))
-        most=eval('请输入保底抽数:')
     if mode=='3' or 'unlimit':
         p=eval(input('请输入每抽出货的概率:'))
         
@@ -93,7 +75,7 @@ class step():
                     if self.mg and mg_b:
                         if insur==self.mg:                  #非酋的强运！（大保底）
                             for k in range(self.ups):
-                                if (k+(1-k)*pt)<=cache*self.ups/self.p_up<(k+1-k*pt):
+                                if (k+(self.ups-k)*self.p_up)<=cache*self.ups/pt<(k+1+(self.ups-k-1)*self.p_up):
                                     count[k]+=1
                                     break
                             insur=0                         #大保底重置
@@ -149,39 +131,146 @@ class bound():
         else:
             return 0
 
-if __name__=="__main__":
-    print('欢迎使用原神抽卡模拟计算器(ver 1.2)！')
-    ys=step(0.006,0.5,1,73,90,1)
-    mrfz1=step(0.02,0.5,1,50,99,0)
-    mrfz2=step(0.02,0.7,2,50,99,0)
-    b1=True
-    while b1:
-        e=eval(input('请输入up目标命座（默认初始new，若非new则请输入目标命座-当前命座-1）:'))
-        b2=True
-        while b2:
-            n=eval(input('请输入计划抽数:'))
-            print('抽到up%d命的概率是 %.2f %%.'%(e,100*ys.smlt(n,[e+1])))
-            cache=input('是否继续(y/n):')
-            if cache=='n':
-                b1=False
-                b2=False
-            if b1:
-                cache=input('是否需要更改命座数(y/n):')
-                if cache=='y':
-                    b2=False
+def ct(text,Default=True):
+    cache=input(text+'(Y/N):')
+    if (cache=='Y') or (cache=='y') or (not cache and Default):
+        return True
+    elif (cache=='N') or (cache=='n') or (not cache and not Default):
+        return False
+    else:
+        ct(text,Default)
     
+
+def ys_OI(n=None,e=None):
+    ys=step(0.006,0.5,1,73,90,1)
+    if e is None:
+        e=check_input('请输入up目标命座（默认初始new，若非new则请输入目标命座-当前命座-1）:','N')
+    if n is None:
+        n=check_input('请输入计划抽数:','N')
+    print('抽到up%d命的概率是 %.2f %%.'%(e,100*ys.smlt(n,[e+1])))
+    cache=ct('是否继续')
+    if cache:
+        cache=ct('是否需要更改命座数')
+        if cache:
+            ys_OI()
+        else:
+            ys_OI(None,e)
+
+def mrfz_OI(ups=None,n=None,e=None):
+    if ups is None:
+        ups=check_input("请输入池子中up角色数量:",'N')
+    if e is None:
+        e=[]
+        for i in range(ups):
+            e.append(check_input("请输入期望抽到第%d个目标的数量:"%(i+1),'N'))
+    if n is None:
+        n=input('请输入计划抽数:','N')
+    if ups==1:
+        mrfz1=step(0.02,0.5,1,50,99,0)
+        print('抽到up%d潜的概率是 %.2f %%.'%(e[0],100*mrfz1.smlt(n,e)))
+    if ups==2:
+        mrfz2=step(0.02,0.7,2,50,99,0)
+        print('达到目标结果的概率是 %.2f %%.'%(100*mrfz2.smlt(n,e)))
+    cache=ct('是否继续')
+    if cache:
+        cache=ct('是否需要更换卡池')
+        if cache:
+            mrfz_OI()
+        else:
+            cache=ct('是否需要更改期望结果')
+            if cache:
+                mrfz_OI(ups)
+            else:
+                mrfz_OI(ups,None,e)
+
+def diy_step_OI(p=None,p_up=None,ups=None,thres=None,most=None,mg=None,n=None,e=None):
+    if p is None:
+        p=check_input("请输入稀有度最高角色的出率:",'p')
+    if p_up is None:
+        p_up=check_input("请输入up角色出率占稀有度最高角色的比例:",'p')
+    if ups is None:
+        ups=check_input("请输入up角色个数:",'N')
+    if thres is None:
+        thres=check_input("请输入触发概率递增的阈限抽数:",'N')
+    if most is None:
+        most=check_input("请输入必出最高稀有度的上限抽数/触发递增概率后每抽增加的概率:")
+    if mg is None:
+        mg=check_input("请输入歪几必出（如无大保底机制请输入0）:",'N')
+    diy=step(p,p_up,ups,thres,most,mg)
+    if e is None:
+        e=[]
+        for i in range(ups):
+            e.append(eval(input("请输入期望抽到第%d个目标的数量:"%(i+1))))
+    if n is None:
+        n=eval(input('请输入计划抽数:'))
+    print('达到目标结果的概率是 %.2f %%.'%(100*diy.smlt(n,e)))
+    cache=ct('是否继续')
+    if cache:
+        cache=ct('是否需要更换卡池')
+        if cache:
+            diy_step_OI()
+        else:
+            cache=ct('是否需要更改期望抽卡结果')
+            if cache:
+                diy_step_OI(p,p_up,ups,thres,most,mg)
+            else:
+                diy_step_OI(p,p_up,ups,thres,most,mg,None,e)
+
+def check_input(text,require=''):                       #酒馆防爆机制（输入合法性检查）
+    '''
+    'N':自然数
+    'p':0-1
+    '''
+    cache=input(text)
+    if require:
+        if require=='N':
+            try:
+                if (eval(cache)==int(eval(cache))) and (eval(cache)>=0):
+                    return eval(cache)
+                else:
+                    print('请输入自然数！')
+                    return check_input(text,require)
+            except:
+                print('数据格式错误！请输入自然数！')
+                return check_input(text,require)
+        if require=='p':
+            try:
+                if 0<=eval(cache)<=1:
+                    return eval(cache)
+                else:
+                    print('请输入0-1之间的数！')
+                    return check_input(text,require)
+            except:
+                print('数据格式错误！请输入0-1之间的数！')
+                return check_input(text,require)
+    else:
+        try:
+            return eval(cache)
+        except:
+            return cache
+
+if __name__=="__main__":
+    print('欢迎使用抽卡模拟计算器(ver 1.3)！')
+    mode=input('请输入想选择的卡池(1:原神, 2:明日方舟, 3:自定义可变概率卡池):')
+    if mode=='1':
+        ys_OI()
+    elif mode=='2':
+        mrfz_OI()
+    elif mode=='3':
+        diy_step_OI()
 
 '''
 p_ys=[]
-ys=step(0.006,0.5,73,90,True)
+ys=step(0.006,0.5,1,73,90,1)
 for i in range(360):
-    p.append(ys(i).smlt(n,2,100000))
-    print('%3d %.5f'%(i,p[-1]))
-print(p)
+    p_ys.append(ys(i).smlt(n,[2],100000))
+    print('%3d %.5f'%(i,p_ys[-1]))
+print(p_ys)
 
 p_mrfz=[]
+mrfz2=step(0.02,0.7,2,50,99,0)
 for i in range(1,401):
-    p.append(lottery_mrfz(i,2))
-    print('%3d %.5f'%(i,lottery_mrfz(i,2)))
-print(p)
+    p_mrfz.append(mrfz2.smlt(i,[1,1]))
+    print('%3d %.5f'%p_mrfz[-1])
+print(p_mrfz)
 '''
