@@ -22,7 +22,7 @@ class Ui(Frame):
 
     def __init__(self,master=None):
         Frame.__init__(self,master)
-        self.master.title('抽卡期望计算器ver1.0')
+        self.master.title('抽卡期望计算器ver1.4')
         self.master.geometry('1280x720')
         self.createWidgets()
 
@@ -402,12 +402,14 @@ if __name__=="__main__":
     
     file="gacha_data.dll"
 
-    with open(file,'r',encoding='utf-8') as f:
-        lines=f.readlines()
-    for line in lines:
-        cache=line.split(',')
-        model[cache[0]]=cache[1:]
-
+    try:
+        with open(file,'r',encoding='utf-8') as f:
+            lines=f.readlines()
+        for line in lines:
+            cache=line.split(',')
+            model[cache[0]]=cache[1:]
+    except:
+        pass
     
     top=Tk()
     mode=StringVar()
