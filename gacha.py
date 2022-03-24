@@ -1,4 +1,11 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import random
+
+from tkinter import *
+from tkinter import ttk
+from tkinter.messagebox import *
 
 '''
 def gacha(n,mode,times=100000):
@@ -9,6 +16,221 @@ def gacha(n,mode,times=100000):
         p=1/eval(print('请输入套装收藏品件数:'))
         r=eval(input("请输入重复收藏品兑换新收藏品的比例:"))
 '''
+class Ui(Frame):
+    global model
+    global file
+
+    def __init__(self,master=None):
+        Frame.__init__(self,master)
+        self.master.title('抽卡期望计算器ver1.0')
+        self.master.geometry('1280x720')
+        self.createWidgets()
+
+    def createWidgets(self):
+        self.top=self.winfo_toplevel()
+
+        self.cmb=ttk.Combobox(self.top, textvariable=mode, state='readonly')
+        name_list=self.set_cmb_value()
+        self.cmb['value']=name_list
+        self.cmb.bind('<<ComboboxSelected>>', self.set_para)
+        self.cmb.place(relx=0.7,rely=0.1,relwidth=0.1,relheight=0.05)
+
+        self.lb1=Label(self.top,text='最高稀有度出率')
+        self.lb2=Label(self.top,text='up占最高稀有度比例')
+        self.lb3=Label(self.top,text='up角色数量')
+        self.lb4=Label(self.top,text='触发概率递增机制抽数')
+        self.lb5=Label(self.top,text='必出抽数/每抽递增概率')
+        self.lb6=Label(self.top,text='大保底歪几必出,0为无大保底机制')
+        self.lb1.place(relx=0.05,rely=0.2,relwidth=0.1,relheight=0.05)
+        self.lb2.place(relx=0.2,rely=0.2,relwidth=0.1,relheight=0.05)
+        self.lb3.place(relx=0.35,rely=0.2,relwidth=0.1,relheight=0.05)
+        self.lb4.place(relx=0.5,rely=0.2,relwidth=0.1,relheight=0.05)
+        self.lb5.place(relx=0.65,rely=0.2,relwidth=0.1,relheight=0.05)
+        self.lb6.place(relx=0.8,rely=0.2,relwidth=0.15,relheight=0.05)
+
+        self.ety1=Entry(self.top)
+        self.ety2=Entry(self.top)
+        self.ety3=Entry(self.top)
+        self.ety4=Entry(self.top)
+        self.ety5=Entry(self.top)
+        self.ety6=Entry(self.top)
+        self.ety1.place(relx=0.05,rely=0.3,relwidth=0.1,relheight=0.05)
+        self.ety2.place(relx=0.2,rely=0.3,relwidth=0.1,relheight=0.05)
+        self.ety3.place(relx=0.35,rely=0.3,relwidth=0.1,relheight=0.05)
+        self.ety4.place(relx=0.5,rely=0.3,relwidth=0.1,relheight=0.05)
+        self.ety5.place(relx=0.65,rely=0.3,relwidth=0.1,relheight=0.05)
+        self.ety6.place(relx=0.8,rely=0.3,relwidth=0.15,relheight=0.05)
+        self.ety1.bind('<KeyRelease>',self.check)
+        self.ety2.bind('<KeyRelease>',self.check)
+        self.ety3.bind('<KeyRelease>',self.check)
+        self.ety4.bind('<KeyRelease>',self.check)
+        self.ety5.bind('<KeyRelease>',self.check)
+        self.ety6.bind('<KeyRelease>',self.check)
+
+        self.lb7=Label(self.top,text='总抽数')
+        self.lb8=Label(self.top,text='期望结果')
+        self.lb7.place(relx=0.2,rely=0.4,relwidth=0.1,relheight=0.05)
+        self.lb8.place(relx=0.4,rely=0.4,relwidth=0.1,relheight=0.05)
+        self.ety7=Entry(self.top)
+        self.ety8=Entry(self.top)
+        self.ety7.place(relx=0.2,rely=0.5,relwidth=0.1,relheight=0.05)
+        self.ety8.place(relx=0.4,rely=0.5,relwidth=0.1,relheight=0.05)
+        self.ety7.bind('<KeyRelease>',self.check)
+
+        self.btn1=Button(self.top,text='计算',command=lambda: self.output())
+        self.btn1.place(relx=0.7,rely=0.45,relwidth=0.2,relheight=0.1)
+        self.btn2=Button(self.top,text='保存模板',command=lambda: self.save_model())
+        self.btn2.place(relx=0.85,rely=0.05,relwidth=0.1,relheight=0.05)
+        self.btn3=Button(self.top,text='删除模板',command=lambda: self.delete_model())
+        self.btn3.place(relx=0.85,rely=0.15,relwidth=0.1,relheight=0.05)
+
+        self.lb9=Label(self.top,text='')
+        self.lb9.place(relx=0.25,rely=0.7,relwidth=0.5,relheight=0.1)
+
+    def set_para(self,event):
+        self.ety1.config(state='normal')
+        self.ety2.config(state='normal')
+        self.ety3.config(state='normal')
+        self.ety4.config(state='normal')
+        self.ety5.config(state='normal')
+        self.ety6.config(state='normal')
+        self.ety7.config(state='normal')
+        self.ety8.config(state='normal')
+        self.ety1.delete(0,END)
+        self.ety2.delete(0,END)
+        self.ety3.delete(0,END)
+        self.ety4.delete(0,END)
+        self.ety5.delete(0,END)
+        self.ety6.delete(0,END)
+        self.ety7.delete(0,END)
+        self.ety8.delete(0,END)
+        
+        m=mode.get()
+        if m in model.keys():
+            self.ety1.insert(END,str(model[m][0]))
+            self.ety1.config(state='readonly')
+            self.ety2.insert(END,str(model[m][1]))
+            self.ety2.config(state='readonly')
+            self.ety3.insert(END,str(model[m][2]))
+            self.ety3.config(state='readonly')
+            self.ety4.insert(END,str(model[m][3]))
+            self.ety4.config(state='readonly')
+            self.ety5.insert(END,str(model[m][4]))
+            self.ety5.config(state='readonly')
+            self.ety6.insert(END,str(model[m][5]))
+            self.ety6.config(state='readonly')
+            self.cmb.config(state='readonly')
+        else:
+            self.cmb.config(state='normal')
+
+    def output(self):
+        try:
+            p=eval(self.ety1.get())
+            p_up=eval(self.ety2.get())
+            ups=eval(self.ety3.get())
+            thres=eval(self.ety4.get())
+            most=eval(self.ety5.get())
+            mg=eval(self.ety6.get())
+            n=eval(self.ety7.get())
+            e=[0]
+            for c in self.ety8.get():
+                if c != ',':
+                    e[-1]=10*e[-1]+eval(c)
+                else:
+                    e.append(0)
+            #print(p,p_up,ups,thres,most,mg,n,e)
+            self.lb9.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).smlt(n,e)))
+        except:
+            showerror('Error','期望目标格式错误！')
+
+    def check(self,event):
+        if self.ety1.get():
+            try:
+                if eval(self.ety1.get())>1:
+                    showwarning('Warning','请输入0-1之间的数')
+                    self.ety1.delete(0,END)
+            except:
+                showwarning('Warning','数据类型错误！请输入0-1之间的数')
+                self.ety1.delete(len(self.ety1.get())-1,END)
+        if self.ety2.get():
+            try:
+                if eval(self.ety2.get())>1:
+                    showwarning('Warning','请输入0-1之间的数')
+                    self.ety2.delete(0,END)
+            except:
+                showwarning('Warning','数据类型错误！请输入0-1之间的数')
+                self.ety2.delete(len(self.ety2.get())-1,END)
+        if self.ety3.get():
+            if not self.ety3.get()[-1].isnumeric():
+                showwarning('Warning','请输入整数')
+                self.ety3.delete(len(self.ety3.get())-1,END)
+        if self.ety4.get():
+            if not self.ety4.get()[-1].isnumeric():
+                showwarning('Warning','请输入整数')
+                self.ety4.delete(len(self.ety4.get())-1,END)
+        if self.ety5.get():
+            try:
+                eval(self.ety5.get())
+            except:
+                showwarning('Warning','数据类型错误！请输入数字')
+                self.ety5.delete(len(self.ety5.get())-1,END)
+        if self.ety6.get():
+            if not self.ety6.get()[-1].isnumeric():
+                showwarning('Warning','请输入整数')
+                self.ety6.delete(len(self.ety6.get())-1,END)
+        if self.ety7.get():
+            if not self.ety7.get()[-1].isnumeric():
+                showwarning('Warning','请输入整数')
+                self.ety7.delete(len(self.ety7.get())-1,END)
+
+    def save_model(self):
+        if self.cmb.get() in model.keys():
+            showwarning('Warning','保存模板名称与已有模板重复！')
+        else:
+            if self.cmb.get() and self.ety1.get() and self.ety2.get() and self.ety3.get() and self.ety4.get() and self.ety5.get() and self.ety6.get():
+                with open(file,'a',encoding='utf-8') as f:
+                    f.write(','.join([self.cmb.get(),
+                                      self.ety1.get(),
+                                      self.ety2.get(),
+                                      self.ety3.get(),
+                                      self.ety4.get(),
+                                      self.ety5.get(),
+                                      self.ety6.get()]))
+                    f.write('\n')
+                model[self.cmb.get()]=[self.ety1.get(),self.ety2.get(),self.ety3.get(),self.ety4.get(),self.ety5.get(),self.ety6.get()]
+                
+                name_list=self.set_cmb_value()
+                self.cmb['value']=name_list
+                self.cmb.current(len(name_list)-2)
+                self.set_para(None)
+
+    def delete_model(self):
+        if self.cmb.get() not in model.keys():
+            showerror('Error','无已有模板！')
+        elif self.cmb.get() in ['原神','明日方舟单up','明日方舟双up']:
+            showwarning('Warning','初始模板不可删除！')
+        else:                                               #self.cmb.get() in model.keys()
+            with open(file,'r',encoding='utf-8') as f:
+                lines=f.readlines()
+            with open(file,'w',encoding='utf-8') as f:
+                for line in lines:
+                    if self.cmb.get() not in line:
+                        f.write(line)
+            del model[self.cmb.get()]
+
+            name_list=self.set_cmb_value()
+            self.cmb['value']=name_list
+            self.cmb.current(len(name_list)-1)
+            self.set_para(None)
+            
+    def set_cmb_value(self):
+        global model
+        
+        cache=[item for item in model.keys()]
+        cache.append('自定义')
+        name_list=tuple(cache)
+        return name_list
+
 def prob_ys(n):
     if n<=73:
         return 0.006
@@ -20,7 +242,6 @@ def prob_mrfz(n):
         return 0.02
     else:
         return 0.02*n-0.98                          #0.02*(n-50)+0.02
-
 
 class step():
     def __init__(self,p,p_up,ups,thres,most,mg,*args,**kwargs):
@@ -40,7 +261,7 @@ class step():
         if most>1:
             step.most=most
         else:
-            step.most=thres+(1-p)*most
+            step.most=round(thres+(1-p)/most)
 
     def prob(self,n):
         if n<self.thres:
@@ -139,82 +360,6 @@ def ct(text,Default=True):
         return False
     else:
         ct(text,Default)
-    
-
-def ys_OI(n=None,e=None):
-    ys=step(0.006,0.5,1,73,90,1)
-    if e is None:
-        e=check_input('请输入up目标命座（默认初始new，若非new则请输入目标命座-当前命座-1）:','N')
-    if n is None:
-        n=check_input('请输入计划抽数:','N')
-    print('抽到up%d命的概率是 %.2f %%.'%(e,100*ys.smlt(n,[e+1])))
-    cache=ct('是否继续')
-    if cache:
-        cache=ct('是否需要更改命座数')
-        if cache:
-            ys_OI()
-        else:
-            ys_OI(None,e)
-
-def mrfz_OI(ups=None,n=None,e=None):
-    if ups is None:
-        ups=check_input("请输入池子中up角色数量:",'N')
-    if e is None:
-        e=[]
-        for i in range(ups):
-            e.append(check_input("请输入期望抽到第%d个目标的数量:"%(i+1),'N'))
-    if n is None:
-        n=input('请输入计划抽数:','N')
-    if ups==1:
-        mrfz1=step(0.02,0.5,1,50,99,0)
-        print('抽到up%d潜的概率是 %.2f %%.'%(e[0],100*mrfz1.smlt(n,e)))
-    if ups==2:
-        mrfz2=step(0.02,0.7,2,50,99,0)
-        print('达到目标结果的概率是 %.2f %%.'%(100*mrfz2.smlt(n,e)))
-    cache=ct('是否继续')
-    if cache:
-        cache=ct('是否需要更换卡池')
-        if cache:
-            mrfz_OI()
-        else:
-            cache=ct('是否需要更改期望结果')
-            if cache:
-                mrfz_OI(ups)
-            else:
-                mrfz_OI(ups,None,e)
-
-def diy_step_OI(p=None,p_up=None,ups=None,thres=None,most=None,mg=None,n=None,e=None):
-    if p is None:
-        p=check_input("请输入稀有度最高角色的出率:",'p')
-    if p_up is None:
-        p_up=check_input("请输入up角色出率占稀有度最高角色的比例:",'p')
-    if ups is None:
-        ups=check_input("请输入up角色个数:",'N')
-    if thres is None:
-        thres=check_input("请输入触发概率递增的阈限抽数:",'N')
-    if most is None:
-        most=check_input("请输入必出最高稀有度的上限抽数/触发递增概率后每抽增加的概率:")
-    if mg is None:
-        mg=check_input("请输入歪几必出（如无大保底机制请输入0）:",'N')
-    diy=step(p,p_up,ups,thres,most,mg)
-    if e is None:
-        e=[]
-        for i in range(ups):
-            e.append(eval(input("请输入期望抽到第%d个目标的数量:"%(i+1))))
-    if n is None:
-        n=eval(input('请输入计划抽数:'))
-    print('达到目标结果的概率是 %.2f %%.'%(100*diy.smlt(n,e)))
-    cache=ct('是否继续')
-    if cache:
-        cache=ct('是否需要更换卡池')
-        if cache:
-            diy_step_OI()
-        else:
-            cache=ct('是否需要更改期望抽卡结果')
-            if cache:
-                diy_step_OI(p,p_up,ups,thres,most,mg)
-            else:
-                diy_step_OI(p,p_up,ups,thres,most,mg,None,e)
 
 def check_input(text,require=''):                       #酒馆防爆机制（输入合法性检查）
     '''
@@ -250,14 +395,23 @@ def check_input(text,require=''):                       #酒馆防爆机制（�
             return cache
 
 if __name__=="__main__":
-    print('欢迎使用抽卡模拟计算器(ver 1.3)！')
-    mode=input('请输入想选择的卡池(1:原神, 2:明日方舟, 3:自定义可变概率卡池):')
-    if mode=='1':
-        ys_OI()
-    elif mode=='2':
-        mrfz_OI()
-    elif mode=='3':
-        diy_step_OI()
+    model={'原神':[0.006,0.5,1,73,90,1],
+           '明日方舟单up':[0.02,0.5,1,50,0.02,0],
+           '明日方舟双up':[0.02,0.7,2,50,0.02,0]
+           }
+    
+    file="gacha_data.dll"
+
+    with open(file,'r',encoding='utf-8') as f:
+        lines=f.readlines()
+    for line in lines:
+        cache=line.split(',')
+        model[cache[0]]=cache[1:]
+
+    
+    top=Tk()
+    mode=StringVar()
+    Ui(top).mainloop()
 
 '''
 p_ys=[]
