@@ -525,7 +525,7 @@ class fixed():
 
     def prob(self,n,e):
         if self.most and (n>=e*self.most):
-            return 0
+            return 1
         else:
             p=1
             for i in range(e-math.floor(n/self.most)):
