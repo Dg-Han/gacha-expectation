@@ -312,9 +312,9 @@ class Ui(Frame):
         self.ety1.place(relx=0.1,rely=0.3,relwidth=0.1,relheight=0.05)
         self.ety2.place(relx=0.3,rely=0.3,relwidth=0.1,relheight=0.05)
         self.ety3.place(relx=0.5,rely=0.3,relwidth=0.1,relheight=0.05)
-        self.ety1.bind('KeyRelease',self.check_fixed)
-        self.ety2.bind('KeyRelease',self.check_fixed)
-        self.ety3.bind('KeyRelease',self.check_fixed)
+        self.ety1.bind('<KeyRelease>',self.check_fixed)
+        self.ety2.bind('<KeyRelease>',self.check_fixed)
+        self.ety3.bind('<KeyRelease>',self.check_fixed)
 
         self.lb4=Label(self.master,text='总抽数')
         self.lb5=Label(self.master,text='期望结果')
@@ -324,8 +324,8 @@ class Ui(Frame):
         self.ety5=Entry(self.master)
         self.ety4.place(relx=0.2,rely=0.5,relwidth=0.1,relheight=0.05)
         self.ety5.place(relx=0.4,rely=0.5,relwidth=0.1,relheight=0.05)
-        self.ety4.bind('KeyRelease',self.check_fixed)
-        self.ety5.bind('KeyRelease',self.check_fixed)
+        self.ety4.bind('<KeyRelease>',self.check_fixed)
+        self.ety5.bind('<KeyRelease>',self.check_fixed)
 
         self.lb6=Label(self.master,text='')
         self.lb6.place(relx=0.25,rely=0.7,relwidth=0.5,relheight=0.1)
