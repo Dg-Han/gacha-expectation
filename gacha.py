@@ -3,6 +3,7 @@
 
 import random
 import math
+#import time
 
 from tkinter import *
 from tkinter import ttk
@@ -61,7 +62,7 @@ class Ui(Frame):
             self.info.title('有关信息')
             self.info.geometry('320x240')
             self.info.lb1=Label(self.info,text='抽卡期望计算器')
-            self.info.lb2=Label(self.info,text='当前版本: 0.1.5 (ver20220328)')
+            self.info.lb2=Label(self.info,text='当前版本: 0.1.6 (ver20220406)')
             self.info.lb3=Label(self.info,text='Copyright by Dg_Han. All Rights Reserved.')
             self.info.lb4=Label(self.info,text='github: https://github.com/Dg-Han')
             self.info.lb1.pack()
@@ -164,6 +165,23 @@ class Ui(Frame):
             self.cmb.config(state='normal')
 
     def step_output(self):
+        '''
+        p=eval(self.ety1.get())
+        p_up=eval(self.ety2.get())
+        ups=eval(self.ety3.get())
+        thres=eval(self.ety4.get())
+        most=eval(self.ety5.get())
+        mg=eval(self.ety6.get())
+        n=eval(self.ety7.get())
+        e=[0]
+        for c in self.ety8.get():
+            if (48<=ord(c)<=57):
+                e[-1]=10*e[-1]+eval(c)
+            elif c==',':
+                e.append(0)
+        #print(p,p_up,ups,thres,most,mg,n,e)
+        self.lb9.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).smlt(n,e)))
+        '''
         try:
             p=eval(self.ety1.get())
             p_up=eval(self.ety2.get())
@@ -179,7 +197,10 @@ class Ui(Frame):
                 elif c==',':
                     e.append(0)
             #print(p,p_up,ups,thres,most,mg,n,e)
-            self.lb9.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).smlt(n,e)))
+            if ups==1:
+                self.lb9.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).calc(n,e,0)))
+            else:
+                self.lb9.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).smlt(n,e)))
         except:
             showerror('Error','期望目标格式错误！')
 
@@ -300,7 +321,7 @@ class Ui(Frame):
         self.cmb.set('')
 
         self.lb1=Label(self.master,text='最高稀有度出率')
-        self.lb2=Label(self.master,text='up占最高稀有度比例')
+        self.lb2=Label(self.master,text='up角色出率')
         self.lb3=Label(self.master,text='保底抽数,0为无保底机制')
         self.lb1.place(relx=0.1,rely=0.2,relwidth=0.1,relheight=0.05)
         self.lb2.place(relx=0.3,rely=0.2,relwidth=0.1,relheight=0.05)
@@ -441,18 +462,22 @@ class step():
         else:
             return (1-self.p)*(n-self.thres)/(self.most-self.thres)+self.p
 
-    def smlt(self,n,e,times=100000):
+    def smlt(self,n,e,detail=False,times=100000):
         '''
         n为总抽数
         e为期望抽卡结果（数组形式表示）
         times为重复模拟次数
         '''
-        s=0
+        #start=time.time()
+        
         up=dict()
+        result=0
         for i in range(times):                              #新狗哥入场
             insur=0                                         #非酋计数器（大保底计数器）
             turn=0                                          #小保底计数器
+            s=0
             count=[0 for i in range(self.ups)]              #up计数器
+            b=False
             for j in range(n):
                 turn+=1
                 pt=self.prob(turn)
@@ -476,17 +501,93 @@ class step():
                             insur+=1                        #非酋复活甲（大保底激活）
                             s+=1                            #歪计数器+1                          
                     turn=0                                  #新轮回开始（保底计数器清零）
+                    
+                    if (not detail)and(sum(count)>=sum(e)):
+                        if judge_exp(count,e):
+                            break
+
             count=tuple(count)
             up[count]=up.get(count,0)+1
-        result=times
 
+        result=times
         for key in up.keys():
-            for i in range(len(key)):
-                if key[i]<e[i]:
-                    result-=up[key]
-                    break
+            if not judge_exp(key,e):
+                result-=up[key]
+
+        #end=time.time()
+        #print('%d: Running time: %s seconds.'%(n,end-start))
         
         return eval('%.4f'%(result/times))
+
+    def calc(self,n,e,exp=12):
+        up=[[tuple([0 for i in range(len(e))]),0,0,0,1]]
+        '''
+        up[0]: up结果
+        up[1]: 总抽数
+        up[2]: 该轮抽数
+        up[3]: 保底结果
+        up[4]: 概率
+        '''
+        #start=time.time()
+
+        if self.mg and (n>=(self.mg+1)*self.most*sum(e)):
+            return 1
+        else:
+            cache_dict=dict()
+            result=0
+            
+            i=0
+            while up[i][1]<=n-1:
+                cache_dict[tuple([up[i][0],up[i][1]+1,up[i][2]+1,up[i][3]])]=cache_dict.get(tuple([up[i][0],up[i][1]+1,up[i][2]+1,up[i][3]]),0)+up[i][4]*(1-self.prob(up[i][2]+1))
+                if self.mg and (up[i][3]==self.mg):
+                    for j in range(len(e)):
+                        cache=[]
+                        for k in range(len(e)):
+                            if j==k:
+                                cache.append(up[i][0][k]+1)
+                            else:
+                                cache.append(up[i][0][k])
+                        if judge_exp(cache,e):
+                            result+=up[i][4]*self.prob(up[i][2]+1)/self.ups
+                        else:
+                            cache_dict[tuple([tuple(cache),up[i][1]+1,0,0])]=cache_dict.get(tuple([tuple(cache),up[i][1]+1,0,0]),0)+up[i][4]*self.prob(up[i][2]+1)/self.ups
+                else:
+                    cache_dict[tuple([up[i][0],up[i][1]+1,0,up[i][3]+1])]=cache_dict.get(tuple([up[i][0],up[i][1]+1,0,up[i][3]+1]),0)+up[i][4]*self.prob(up[i][2]+1)*(1-self.p_up)
+                    for j in range(len(e)):
+                        cache=[]
+                        for k in range(len(e)):
+                            if j==k:
+                                cache.append(up[i][0][k]+1)
+                            else:
+                                cache.append(up[i][0][k])
+                        if judge_exp(cache,e):
+                            result+=up[i][4]*self.prob(up[i][2]+1)*self.p_up/self.ups
+                        else:
+                            cache_dict[tuple([tuple(cache),up[i][1]+1,0,0])]=cache_dict.get(tuple([tuple(cache),up[i][1]+1,0,0]),0)+up[i][4]*self.prob(up[i][2]+1)*self.p_up/self.ups
+                if (i+1==len(up)):
+                    for key in cache_dict.keys():
+                        if exp:
+                            if cache_dict[key]>10**(-exp):
+                                cache=list(key)
+                                cache.append(cache_dict[key])
+                                up.append(cache)
+                        else:
+                            if cache_dict[key]:
+                                cache=list(key)
+                                cache.append(cache_dict[key])
+                                up.append(cache)
+                    cache_dict=dict()
+                i+=1
+            
+            while i+1<=len(up):
+                if judge_exp(up[i][0],e):
+                    result+=up[i][4]
+                i+=1
+
+            #end=time.time()
+            #print('Calc %d: Running time: %s seconds.'%(n,end-start))
+                
+            return eval('%.4f'%result)
 
     def output_list(self,up):
         for i in sorted(up.keys()):
@@ -531,6 +632,12 @@ class fixed():
             for i in range(e-math.floor(n/self.most)):
                 p-=((1-self.p_up)**(n-i))*(self.p_up**i)*math.comb(n,i)
             return p
+
+def judge_exp(key,e):
+    for i in range(len(key)):
+        if key[i]<e[i]:
+            return False
+    return True
 
 def ct(text,Default=True):
     cache=input(text+'(Y/N):')
@@ -606,7 +713,7 @@ if __name__=="__main__":
 p_ys=[]
 ys=step(0.006,0.5,1,73,90,1)
 for i in range(360):
-    p_ys.append(ys(i).smlt(n,[2],100000))
+    p_ys.append(ys.smlt(i,[2],100000))
     print('%3d %.5f'%(i,p_ys[-1]))
 print(p_ys)
 
