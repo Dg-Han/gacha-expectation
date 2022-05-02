@@ -3,17 +3,11 @@
 
 import random
 import math
-#import time
+import time
 
 from tkinter import *
 from tkinter import ttk
 from tkinter.messagebox import *
-
-'''     
-    if mode=='4' or 'collection':
-        p=1/eval(print('请输入套装收藏品件数:'))
-        r=eval(input("请输入重复收藏品兑换新收藏品的比例:"))
-'''
 
 class Ui(Frame):
     global step_model
@@ -28,6 +22,7 @@ class Ui(Frame):
         choosemn=Menu(mn,tearoff=False)
         choosemn.add_command(label='概率递增卡池',command=self.createWidgets_step)
         choosemn.add_command(label='固定概率卡池',command=self.createWidgets_fixed)
+        choosemn.add_command(label='收藏品',command=self.createWidgets_collection)
         mn.add_cascade(label='卡池类型选择',menu=choosemn)
         helpmn=Menu(mn,tearoff=False)
         helpmn.add_command(label='Q&A',command=self.show_help)
@@ -62,7 +57,7 @@ class Ui(Frame):
             self.info.title('有关信息')
             self.info.geometry('320x240')
             self.info.lb1=Label(self.info,text='抽卡期望计算器')
-            self.info.lb2=Label(self.info,text='当前版本: 0.1.6 (ver20220406)')
+            self.info.lb2=Label(self.info,text='当前版本: 0.1.7.0 (ver20220502)')
             self.info.lb3=Label(self.info,text='Copyright by Dg_Han. All Rights Reserved.')
             self.info.lb4=Label(self.info,text='github: https://github.com/Dg-Han')
             self.info.lb1.pack()
@@ -424,6 +419,149 @@ class Ui(Frame):
         name_list=tuple(cache)
         return name_list
 
+    def createWidgets_collection(self):
+        for widget in self.master.winfo_children():
+            if (widget.winfo_class()!='Frame')and(widget.winfo_class()!='Menu'):
+                widget.destroy()
+
+        self.lb1=Label(self.master,text='收藏品总数')
+        self.lb2=Label(self.master,text='收藏品获得概率')
+        self.lb3=Label(self.master,text='兑换new所需token')
+        self.lb4=Label(self.master,text='重复收藏品获得token')
+        self.lb1.place(relx=0.1,rely=0.2,relwidth=0.1,relheight=0.05)
+        self.lb2.place(relx=0.3,rely=0.2,relwidth=0.1,relheight=0.05)
+        self.lb3.place(relx=0.5,rely=0.2,relwidth=0.1,relheight=0.05)
+        self.lb4.place(relx=0.7,rely=0.2,relwidth=0.1,relheight=0.05)
+
+        self.ety1=Entry(self.master)
+        self.ety2=Entry(self.master)
+        self.ety3=Entry(self.master)
+        self.ety4=Entry(self.master)
+        self.ety1.place(relx=0.1,rely=0.3,relwidth=0.1,relheight=0.05)
+        self.ety2.place(relx=0.3,rely=0.3,relwidth=0.1,relheight=0.05)
+        self.ety3.place(relx=0.5,rely=0.3,relwidth=0.1,relheight=0.05)
+        self.ety4.place(relx=0.7,rely=0.3,relwidth=0.1,relheight=0.05)
+
+        self.lb5=Label(self.master,text='总抽数')
+        self.lb6=Label(self.master,text='已有收藏品情况')
+        self.lb7=Label(self.master,text='重复收藏品情况')
+        self.lb5.place(relx=0.1,rely=0.4,relwidth=0.1,relheight=0.05)
+        self.lb6.place(relx=0.3,rely=0.4,relwidth=0.1,relheight=0.05)
+        self.lb7.place(relx=0.5,rely=0.4,relwidth=0.1,relheight=0.05)
+
+        self.ety5=Entry(self.master)
+        self.ety6=Entry(self.master)
+        self.ety7=Entry(self.master)
+        self.ety5.place(relx=0.1,rely=0.5,relwidth=0.1,relheight=0.05)
+        self.ety6.place(relx=0.3,rely=0.5,relwidth=0.1,relheight=0.05)
+        self.ety7.place(relx=0.5,rely=0.5,relwidth=0.1,relheight=0.05)
+
+        self.lb8=Label(self.master,text='')
+        self.lb8.place(relx=0.25,rely=0.7,relwidth=0.5,relheight=0.1)
+
+        self.btn1=Button(self.master,text='计算',command=lambda: self.collection_output())
+        self.btn1.place(relx=0.7,rely=0.45,relwidth=0.2,relheight=0.1)
+        self.btn2=Button(self.master,text='添加收藏品属性',command=lambda: self.collect_collection())
+        self.btn2.place(relx=0.8,rely=0.1,relwidth=0.1,relheight=0.05)
+
+    def collect_collection(self):
+        if not self.ety1.get():
+            showwarning('Warning!','请先输入收藏品总数！')
+            return None
+        
+        self.top=Toplevel()
+        self.top.title('收藏品属性')
+        self.top.geometry('720x480')
+        self.top.lb1=Label(self.top,text='同稀有度收藏品件数')
+        self.top.lb2=Label(self.top,text='同稀有度收藏品获得总概率/各件概率')
+        self.top.lb3=Label(self.top,text='兑换未获得同稀有度收藏品所需token数')
+        self.top.lb4=Label(self.top,text='获得重复同稀有度收藏品获得token数')
+        self.top.lb1.place(relx=0.1,rely=0.1,relwidth=0.3,relheight=0.1)
+        self.top.lb2.place(relx=0.6,rely=0.1,relwidth=0.3,relheight=0.1)
+        self.top.lb3.place(relx=0.1,rely=0.4,relwidth=0.3,relheight=0.1)
+        self.top.lb4.place(relx=0.6,rely=0.4,relwidth=0.3,relheight=0.1)
+
+        self.top.ety1=Entry(self.top)
+        self.top.ety2=Entry(self.top)
+        self.top.ety3=Entry(self.top)
+        self.top.ety4=Entry(self.top)
+        self.top.ety1.place(relx=0.1,rely=0.2,relwidth=0.3,relheight=0.1)
+        self.top.ety2.place(relx=0.6,rely=0.2,relwidth=0.3,relheight=0.1)
+        self.top.ety3.place(relx=0.1,rely=0.5,relwidth=0.3,relheight=0.1)
+        self.top.ety4.place(relx=0.6,rely=0.5,relwidth=0.3,relheight=0.1)
+
+        self.top.btn=Button(self.top, text='添加',command=lambda: self.add_collection())
+        self.top.btn.place(relx=0.4,rely=0.8,relwidth=0.2,relheight=0.1)
+
+    def add_collection(self):
+        self.ety2.insert(END,(',' if self.ety2.get() else '')+'['+self.top.ety1.get()+','+self.top.ety2.get()+']')
+        self.ety3.insert(END,(',' if self.ety3.get() else '')+self.top.ety3.get())
+        self.ety4.insert(END,(',' if self.ety4.get() else '')+self.top.ety4.get())
+
+        self.check_collection()
+        
+        self.top.destroy()
+
+    def check_collection(self):
+        if self.ety1.get():
+            try:
+                if eval(self.ety1.get())!=int(eval(self.ety1.get())):
+                    print('请输入正整数！')
+            except:
+                showwarning('Warning','数据类型错误！请输入正整数')
+        if self.ety2.get():
+            pass
+        if self.ety3.get():
+            pass
+        if self.ety4.get():
+            pass
+        if self.ety5.get():
+            pass
+        if self.ety6.get():
+            pass
+        if self.ety7.get():
+            pass
+        
+    def collection_output(self):
+        num=eval(self.ety1.get())
+        if self.ety2.get():
+            if '[' not in self.ety2.get():
+                cache=self.ety2.get().split(',')
+                if len(cache)==1:
+                    p=[float(cache)/num for _ in range(num)]
+                elif len(cache)==num:
+                    p=[float(_) for _ in cache]
+            else:
+                p=[]
+                for s in self.ety2.get():
+                    if s=='[':
+                        p.append([])
+                        cache=''
+                    elif s==']':
+                        cache=cache.split(',')
+                        for i in cache:
+                            p[-1].append(int(float(i)) if int(float(i))==eval(i) else eval(i))
+                        cache=''
+                    else:
+                        cache=cache+s
+        else:
+            p=None
+        cost=eval(self.ety3.get()) if self.ety3.get() else None
+        value=eval(self.ety4.get()) if self.ety4.get() else None
+        n=eval(self.ety5.get())
+        if self.ety6.get():
+            cache=self.ety6.get().split(',')
+            res=[int(_) for _ in cache]
+        else:
+            res=None
+        if self.ety7.get():
+            cache=self.ety7.get().split(',')
+            rp=[int(_) for _ in cache]
+        else:
+            rp=None
+
+        self.lb8.config(text='达到全收藏的概率是 %.2f %%'%(100*collection(num,p,cost,value).smlt(n,res,rp)))
+
 def prob_ys(n):
     if n<=73:
         return 0.006
@@ -471,13 +609,11 @@ class step():
         #start=time.time()
         
         up=dict()
-        result=0
         for i in range(times):                              #新狗哥入场
             insur=0                                         #非酋计数器（大保底计数器）
             turn=0                                          #小保底计数器
             s=0
             count=[0 for i in range(self.ups)]              #up计数器
-            b=False
             for j in range(n):
                 turn+=1
                 pt=self.prob(turn)
@@ -519,7 +655,7 @@ class step():
         
         return eval('%.4f'%(result/times))
 
-    def calc(self,n,e,exp=12):
+    def calc(self,n,e,rel_exp=6):
         up=[[tuple([0 for i in range(len(e))]),0,0,0,1]]
         '''
         up[0]: up结果
@@ -535,6 +671,7 @@ class step():
         else:
             cache_dict=dict()
             result=0
+            max_p=0
             
             i=0
             while up[i][1]<=n-1:
@@ -548,7 +685,10 @@ class step():
                             else:
                                 cache.append(up[i][0][k])
                         if judge_exp(cache,e):
-                            result+=up[i][4]*self.prob(up[i][2]+1)/self.ups
+                            cache_p=up[i][4]*self.prob(up[i][2]+1)/self.ups
+                            if cache_p>max_p:
+                                max_p=cache_p
+                            result+=cache_p
                         else:
                             cache_dict[tuple([tuple(cache),up[i][1]+1,0,0])]=cache_dict.get(tuple([tuple(cache),up[i][1]+1,0,0]),0)+up[i][4]*self.prob(up[i][2]+1)/self.ups
                 else:
@@ -561,13 +701,17 @@ class step():
                             else:
                                 cache.append(up[i][0][k])
                         if judge_exp(cache,e):
-                            result+=up[i][4]*self.prob(up[i][2]+1)*self.p_up/self.ups
+                            cache_p=up[i][4]*self.prob(up[i][2]+1)*self.p_up/self.ups
+                            if cache_p>max_p:
+                                max_p=cache_p
+                            result+=cache_p
                         else:
                             cache_dict[tuple([tuple(cache),up[i][1]+1,0,0])]=cache_dict.get(tuple([tuple(cache),up[i][1]+1,0,0]),0)+up[i][4]*self.prob(up[i][2]+1)*self.p_up/self.ups
+                
                 if (i+1==len(up)):
                     for key in cache_dict.keys():
-                        if exp:
-                            if cache_dict[key]>10**(-exp):
+                        if rel_exp:
+                            if cache_dict[key]>max_p*10**(-rel_exp):
                                 cache=list(key)
                                 cache.append(cache_dict[key])
                                 up.append(cache)
@@ -638,6 +782,128 @@ def judge_exp(key,e):
         if key[i]<e[i]:
             return False
     return True
+
+class collection():
+    def __init__(self,num,p=None,cost=None,value=None,*args,**kwargs):
+        '''
+        num: 收藏品总数
+        p: 收藏品（累计）获取概率
+        cost: 兑换未获得物品所需token数量 (默认为4)
+        value: 重复获得物品时获得token数量 (默认为1), 如无重复收藏品兑换机制输入0
+        level: 收藏品等级数(同等级兑换&重复获得token数相等, 获得概率可不同)
+        '''
+        self.num=num
+        
+        if p is None:
+            self.p=[(_+1)/num for _ in range(num)]
+        else:
+            if type(p[0])==float:
+                self.level=[1 for _ in range(num)]
+                if 0<sum(p)<=1:
+                    self.p=[sum(list(p[:(_+1)])) for _ in range(len(p))]
+                elif sum(p)-1>10**(-9):
+                    showwarning('Warning','获取概率总和大于1!')
+            elif type(p[0])==list:
+                self.p=[]
+                self.level=[]
+                for ps in p:
+                    self.level.append(ps[0])
+                    if len(ps)==2:
+                        for i in range(ps[0]):
+                            self.p.append((self.p[-1] if self.p else 0)+ps[1]/ps[0])
+                    else:
+                        for i in ps[1:]:
+                            self.p.append((self.p[-1] if self.p else 0)+i)
+                if self.p[-1]-1>10**(-9):
+                    showwarning('Warning','获取概率总和大于1!')
+                    self.p=None
+        
+        if cost is None:
+            self.cost=[4 for _ in range(num)]
+        else:
+            if type(cost)==int:
+                self.cost=[cost for _ in range(num)]
+            elif len(cost)==self.num:
+                self.cost=cost
+            elif len(cost)==len(self.level):
+                self.cost=[]
+                for i in range(len(self.level)):
+                    for j in range(self.level[i]):
+                        self.cost.append(cost[i])
+
+        if value is None:
+            self.value=[1 for _ in range(num)]
+        else:
+            if type(value)==int:
+                self.value=[value for _ in range(num)]
+            elif len(value)==self.num:
+                self.value=value
+            elif len(value)==len(self.level):
+                self.value=[]
+                for i in range(len(self.level)):
+                    for j in range(self.level[i]):
+                        self.value.append(value[i])
+            
+
+    def smlt(self,n,res=None,rp=None,times=100000):
+        '''
+        n: 抽数
+        res: 已有收藏品
+        rp: 已有重复收藏品
+        '''
+        #start=time.time()
+        
+        if res is None:
+            res=[0 for _ in range(self.num)]
+        else:
+            cache=res
+            if len(cache)==len(self.level):
+                res=[]
+                for i in range(len(cache)):
+                    for j in range(self.level[i]):
+                        res.append(1 if j<int(cache[i]) else 0)
+            elif len(cache)==self.num:
+                res=[int(cache[_]) for _ in range(self.num)]
+        if rp is None:
+            rp=0
+        else:
+            if type(rp)==int:
+                pass
+            elif type(rp)==list:
+                cache=rp
+                rp=0
+                if len(cache)==1:
+                    rp=cache[0]
+                elif len(cache)==len(self.level):
+                    for i in range(len(self.level)):
+                        rp+=cache[i]*self.value[sum(list(self.level[:i]))]
+                elif len(cache)==self.num:
+                    for i in range(len(self.num)):
+                        rp+=cache[i]*self.value[i]
+        
+        result=0
+        for i in range(times):
+            c=[1 if _ else 0 for _ in res]
+            rp_cache=rp
+            for j in range(n):
+                cache=random.random()
+                k=0
+                while self.p[k]<cache:
+                    k+=1
+                    if k==self.num:
+                        break
+                if k<self.num:
+                    if c[k]:
+                        rp_cache+=self.value[k]
+                    else:
+                        c[k]=1
+            if sum([self.cost[_] if c[_] else 0 for _ in range(self.num)])+rp_cache>=sum(self.cost):
+                result+=1
+
+        #end=time.time()
+        #print('%d: Running time: %s seconds.'%(n,end-start))
+        
+        return eval('%.4f'%(result/times))
 
 def ct(text,Default=True):
     cache=input(text+'(Y/N):')
