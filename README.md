@@ -2,6 +2,21 @@
 
 本程序旨在为抽卡玩家对抽卡预期和预计资源提供信息<br>
 
+version1.0.0
+---
+Update: 增加了对于单up卡池抽卡期望对应达成概率的所需抽数计算功能。<br>
+可通过概率递增的UI直接输入，也可在主体程序结束运行后在IDE内输入<br>
+```
+step(p,p_up,ups,thres,most,mg).interplt(e,target=0.95,lower=0,upper=None)
+```
+>e为抽卡期望结果（数组形式）<br>
+>target为达成概率<br>
+>lower,upper为抽数上下界，upper=None时会初始化为sum(e) * int((self.most if self.most>1 else self.thres+round((1-p)/self.most)) / self.p_up)<br>
+
+结果返回最小的达成期望概率为95%的抽数<br>
+
+发布第一个正式可运行文件版本<br>
+
 version0.1.7.0
 ---
 Update: 增加了对于收藏品抽卡的支持以及相应的UI构建<br>
@@ -31,8 +46,6 @@ collection(num,p,cost,value).smlt(n,res,rp)
 >计划在这个卡池投入30抽，且尚未获得任何收藏品和重复收藏品。
 
 结果返回达成全收藏的概率（保留四位小数）<br> 
-
-更新方向：完善收藏品相关UI的输入合法性判断，以及达成各卡池期望概率分别为50%，75%，95%的所需抽数。完成后将考虑发布第一个正式版本。<br>
 
 version0.1.6
 ---
