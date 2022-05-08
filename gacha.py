@@ -11,6 +11,8 @@ from tkinter.messagebox import *
 
 class Ui(Frame):
     global step_model
+    global fixed_model
+    global mode
     global file
 
     def __init__(self,master=None):
@@ -57,7 +59,7 @@ class Ui(Frame):
             self.info.title('有关信息')
             self.info.geometry('320x240')
             self.info.lb1=Label(self.info,text='抽卡期望计算器')
-            self.info.lb2=Label(self.info,text='当前版本: 0.1.7.0 (ver20220502)')
+            self.info.lb2=Label(self.info,text='当前版本: 1.0.0.0 (ver20220508)')
             self.info.lb3=Label(self.info,text='Copyright by Dg_Han. All Rights Reserved.')
             self.info.lb4=Label(self.info,text='github: https://github.com/Dg-Han')
             self.info.lb1.pack()
@@ -77,7 +79,7 @@ class Ui(Frame):
         self.cmb.place(relx=0.7,rely=0.1,relwidth=0.1,relheight=0.05)
         self.cmb.set('')
 
-        label_list=['最高稀有度出率','up占最高稀有度比例','up角色数量','触发概率递增机制抽数','必出抽数/每抽递增概率','大保底歪几必出,0为无大保底机制']
+        label_list=['最高稀有度出率','up占最高稀有度比例','up角色数量','触发概率递增机制抽数','必出抽数/每抽递增概率','大保底歪几必出\n0为无大保底机制']
 
         for i in range(6):
             self.lb=Label(self.master,text=label_list[i])
@@ -104,34 +106,38 @@ class Ui(Frame):
 
         self.lb7=Label(self.master,text='总抽数')
         self.lb8=Label(self.master,text='期望结果\n多up角色数量间用逗号分隔')
-        self.lb7.place(relx=0.2,rely=0.4,relwidth=0.1,relheight=0.05)
-        self.lb8.place(relx=0.35,rely=0.4,relwidth=0.2,relheight=0.05)
+        self.lb7.place(relx=0.1,rely=0.4,relwidth=0.1,relheight=0.05)
+        self.lb8.place(relx=0.25,rely=0.4,relwidth=0.2,relheight=0.05)
+        self.lb9=Label(self.master,text='期望结果概率\n默认为95%')
+        self.lb9.place(relx=0.5,rely=0.4,relwidth=0.1,relheight=0.05)
         self.ety7=Entry(self.master)
         self.ety8=Entry(self.master)
-        self.ety7.place(relx=0.2,rely=0.475,relwidth=0.1,relheight=0.05)
-        self.ety8.place(relx=0.4,rely=0.475,relwidth=0.1,relheight=0.05)
+        self.ety9=Entry(self.master)
+        self.ety7.place(relx=0.1,rely=0.475,relwidth=0.1,relheight=0.05)
+        self.ety8.place(relx=0.3,rely=0.475,relwidth=0.1,relheight=0.05)
+        self.ety9.place(relx=0.5,rely=0.475,relwidth=0.1,relheight=0.05)
         self.ety7.bind('<KeyRelease>',self.check_step)
         self.ety8.bind('<FocusOut>',self.test)
+        self.ety9.bind('<FocusOut>',self.check_step)
 
         self.btn1=Button(self.master,text='计算',command=lambda: self.step_output())
         self.btn1.place(relx=0.7,rely=0.45,relwidth=0.2,relheight=0.1)
+        self.btn1.bind('<Return>',lambda: self.step_output())
         self.btn2=Button(self.master,text='保存模板',command=lambda: self.save_step_model())
         self.btn2.place(relx=0.85,rely=0.05,relwidth=0.1,relheight=0.05)
         self.btn3=Button(self.master,text='删除模板',command=lambda: self.delete_step_model())
         self.btn3.place(relx=0.85,rely=0.15,relwidth=0.1,relheight=0.05)
 
-        self.lb9=Label(self.master,text='')
-        self.lb9.place(relx=0.25,rely=0.7,relwidth=0.5,relheight=0.1)
+        self.lb10=Label(self.master,text='')
+        self.lb10.place(relx=0.25,rely=0.7,relwidth=0.5,relheight=0.1)
         
-    def set_step_para(self,event):
+    def set_step_para(self,event=None):
         self.ety1.config(state='normal')
         self.ety2.config(state='normal')
         self.ety3.config(state='normal')
         self.ety4.config(state='normal')
         self.ety5.config(state='normal')
         self.ety6.config(state='normal')
-        self.ety7.config(state='normal')
-        self.ety8.config(state='normal')
         self.ety1.delete(0,END)
         self.ety2.delete(0,END)
         self.ety3.delete(0,END)
@@ -140,6 +146,7 @@ class Ui(Frame):
         self.ety6.delete(0,END)
         self.ety7.delete(0,END)
         self.ety8.delete(0,END)
+        self.ety9.delete(0,END)
         
         m=mode.get()
         if m in step_model.keys():
@@ -175,7 +182,36 @@ class Ui(Frame):
             elif c==',':
                 e.append(0)
         #print(p,p_up,ups,thres,most,mg,n,e)
-        self.lb9.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).smlt(n,e)))
+        if self.ety9.get():
+            target=eval(self.ety9.get()) if eval(self.ety9.get())<=1 else eval(self.ety9.get())/100
+        else:
+            target=0.95
+        
+        if ups==1:
+            result=step(p,p_up,ups,thres,most,mg).calc(n,e,None)
+            #nx=step(p,p_up,ups,thres,most,mg).interplt(e,target)
+            lower=0
+            upper=sum(e)*int((most if most>1 else thres+round((1-p)/most))/p_up)
+            fdis=upper-lower
+            while True:
+                n=int(lower+(upper-lower)*(target+0.5)/2)
+                p1=step(p,p_up,ups,thres,most,mg).calc(n,e)
+                p2=step(p,p_up,ups,thres,most,mg).calc(n+1,e)
+                if p1<target<=p2:
+                    nx=n+1
+                    break
+                elif p2<target:
+                    lower=n
+                    self.lb10.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
+                    self.update()
+                else:
+                    upper=n
+                    self.lb10.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
+                    self.update()
+                
+            self.lb10.config(text='达到预期抽卡结果的概率是 %.2f %%\n达到 %d%% 出率的所需抽数为 %d'%(100*result,int(100*target),nx))
+        else:
+            self.lb10.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).smlt(n,e)))
         '''
         try:
             p=eval(self.ety1.get())
@@ -191,13 +227,43 @@ class Ui(Frame):
                     e[-1]=10*e[-1]+eval(c)
                 elif c==',':
                     e.append(0)
+                elif c not in [' ']:
+                    raise TypeError
             #print(p,p_up,ups,thres,most,mg,n,e)
-            if ups==1:
-                self.lb9.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).calc(n,e,0)))
+            if self.ety9.get():
+                target=eval(self.ety9.get()) if eval(self.ety9.get())<=1 else eval(self.ety9.get())/100
             else:
-                self.lb9.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).smlt(n,e)))
-        except:
-            showerror('Error','期望目标格式错误！')
+                target=0.95
+            
+            if ups==1:
+                result=step(p,p_up,ups,thres,most,mg).calc(n,e,None)
+                #nx=step(p,p_up,ups,thres,most,mg).interplt(e,target)
+                lower=0
+                upper=sum(e)*int((most if most>1 else thres+round((1-p)/most))/p_up)
+                fdis=upper-lower
+                while True:
+                    n=int(lower+(upper-lower)*(target+0.5)/2)
+                    p1=step(p,p_up,ups,thres,most,mg).calc(n,e)
+                    p2=step(p,p_up,ups,thres,most,mg).calc(n+1,e)
+                    if p1<target<=p2:
+                        nx=n+1
+                        break
+                    elif p2<target:
+                        lower=n
+                        self.lb10.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
+                        self.update()
+                    else:
+                        upper=n
+                        self.lb10.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
+                        self.update()
+                    
+                self.lb10.config(text='达到预期抽卡结果的概率是 %.2f %%\n达到 %d%% 出率的所需抽数为 %d'%(100*result,int(100*target),nx))
+            else:
+                self.lb10.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).smlt(n,e)))
+        except SyntaxError:
+            showerror('Error','存在参数值为空！')
+        except TypeError:
+            showerror('Error','期望结果输入格式错误！')
 
     def check_step(self,event):
         if self.ety1.get():
@@ -222,7 +288,7 @@ class Ui(Frame):
                 self.ety3.delete(len(self.ety3.get())-1,END)
         if self.ety4.get():
             if not self.ety4.get()[-1].isnumeric():
-                showwarning('Warning','请输入整数！')
+                showwarning('Warning','4请输入数字！')
                 self.ety4.delete(len(self.ety4.get())-1,END)
         if self.ety5.get():
             try:
@@ -232,26 +298,29 @@ class Ui(Frame):
                 self.ety5.delete(len(self.ety5.get())-1,END)
         if self.ety6.get():
             if not self.ety6.get()[-1].isnumeric():
-                showwarning('Warning','请输入整数！')
+                showwarning('Warning','6请输入整数！')
                 self.ety6.delete(len(self.ety6.get())-1,END)
         if self.ety7.get():
             if not self.ety7.get()[-1].isnumeric():
-                showwarning('Warning','请输入整数！')
+                showwarning('Warning','7请输入整数！')
                 self.ety7.delete(len(self.ety7.get())-1,END)
+        if self.ety9.get():
+            try:
+                if eval(self.ety9.get())>100 or eval(self.ety9.get())<0:
+                    showwarning('Warning','请输入百分比或概率！')
+                    self.ety9.delete(0,END)
+            except:
+                showerror('Error','数据类型错误！请输入百分比或概率')
+                self.ety9.delete(0,END)
 
     def test(self,event):
         try:
-            cache=self.ety8.get().split(',')
-            if len(cache)==eval(self.ety3.get()):
-                for item in cache:
-                    try:
-                        eval(item)
-                    except:
-                        showerror('Error','请输入数字！')
-            else:
-                showwarning('Warning','输入期望数量与up角色数量不符！')
+            if self.ety8.get():
+                list=input2nlist(self.ety8.get())
+                if len(list)!=eval(self.ety3.get()):
+                    showwarning('Warning','输入期望数量与up角色数量不符！')
         except:
-            showerror('Error','输入期望角色数量格式错误！')
+            pass
 
     def save_step_model(self):
         if self.cmb.get() in step_model.keys():
@@ -272,7 +341,7 @@ class Ui(Frame):
                 name_list=self.step_cmb_value()
                 self.cmb['value']=name_list
                 self.cmb.current(len(name_list)-2)
-                self.set_step_para(None)
+                self.set_step_para()
             else:
                 showwarning('Warning','存在卡池参数值为空！')
 
@@ -293,7 +362,7 @@ class Ui(Frame):
             name_list=self.step_cmb_value()
             self.cmb['value']=name_list
             self.cmb.set('')
-            self.set_step_para(None)
+            self.set_step_para()
             
     def step_cmb_value(self):
         global step_model
@@ -441,10 +510,14 @@ class Ui(Frame):
         self.ety2.place(relx=0.3,rely=0.3,relwidth=0.1,relheight=0.05)
         self.ety3.place(relx=0.5,rely=0.3,relwidth=0.1,relheight=0.05)
         self.ety4.place(relx=0.7,rely=0.3,relwidth=0.1,relheight=0.05)
+        self.ety1.bind('<FocusOut>',self.check_collection)
+        self.ety2.bind('<FocusOut>',self.check_collection)
+        self.ety3.bind('<FocusOut>',self.check_collection)
+        self.ety4.bind('<FocusOut>',self.check_collection)
 
         self.lb5=Label(self.master,text='总抽数')
         self.lb6=Label(self.master,text='已有收藏品情况')
-        self.lb7=Label(self.master,text='重复收藏品情况')
+        self.lb7=Label(self.master,text='重复收藏品情况/token数量')
         self.lb5.place(relx=0.1,rely=0.4,relwidth=0.1,relheight=0.05)
         self.lb6.place(relx=0.3,rely=0.4,relwidth=0.1,relheight=0.05)
         self.lb7.place(relx=0.5,rely=0.4,relwidth=0.1,relheight=0.05)
@@ -455,6 +528,9 @@ class Ui(Frame):
         self.ety5.place(relx=0.1,rely=0.5,relwidth=0.1,relheight=0.05)
         self.ety6.place(relx=0.3,rely=0.5,relwidth=0.1,relheight=0.05)
         self.ety7.place(relx=0.5,rely=0.5,relwidth=0.1,relheight=0.05)
+        self.ety5.bind('<FocusOut>',self.check_collection)
+        self.ety6.bind('<FocusOut>',self.check_collection)
+        self.ety7.bind('<FocusOut>',self.check_collection)
 
         self.lb8=Label(self.master,text='')
         self.lb8.place(relx=0.25,rely=0.7,relwidth=0.5,relheight=0.1)
@@ -502,7 +578,7 @@ class Ui(Frame):
         
         self.top.destroy()
 
-    def check_collection(self):
+    def check_collection(self,event=None):
         if self.ety1.get():
             try:
                 if eval(self.ety1.get())!=int(eval(self.ety1.get())):
@@ -512,17 +588,22 @@ class Ui(Frame):
         if self.ety2.get():
             pass
         if self.ety3.get():
-            pass
+            input2nlist(self.ety3.get())
         if self.ety4.get():
-            pass
+            input2nlist(self.ety4.get())
         if self.ety5.get():
-            pass
+            try:
+                if eval(self.ety5.get())!=int(eval(self.ety5.get())):
+                    print('请输入正整数！')
+            except:
+                showwarning('Warning','数据类型错误！请输入正整数')
         if self.ety6.get():
-            pass
+            input2nlist(self.ety6.get())
         if self.ety7.get():
-            pass
+            input2nlist(self.ety7.get())
         
     def collection_output(self):
+        '''
         num=eval(self.ety1.get())
         if self.ety2.get():
             if '[' not in self.ety2.get():
@@ -546,21 +627,58 @@ class Ui(Frame):
                         cache=cache+s
         else:
             p=None
-        cost=eval(self.ety3.get()) if self.ety3.get() else None
-        value=eval(self.ety4.get()) if self.ety4.get() else None
+        cost=input2nlist(self.ety3.get()) if self.ety3.get() else None
+        value=input2nlist(self.ety4.get()) if self.ety4.get() else None
         n=eval(self.ety5.get())
-        if self.ety6.get():
-            cache=self.ety6.get().split(',')
-            res=[int(_) for _ in cache]
-        else:
-            res=None
-        if self.ety7.get():
-            cache=self.ety7.get().split(',')
-            rp=[int(_) for _ in cache]
-        else:
-            rp=None
+        res=input2nlist(self.ety6.get()) if self.ety6.get() else None
+        rp=input2nlist(self.ety7.get()) if self.ety7.get() else None
 
         self.lb8.config(text='达到全收藏的概率是 %.2f %%'%(100*collection(num,p,cost,value).smlt(n,res,rp)))
+        '''
+        try:
+            num=eval(self.ety1.get())
+            if self.ety2.get():
+                if '[' not in self.ety2.get():
+                    cache=self.ety2.get().split(',')
+                    if len(cache)==1:
+                        p=[float(cache)/num for _ in range(num)]
+                    elif len(cache)==num:
+                        p=[float(_) for _ in cache]
+                else:
+                    p=[]
+                    for s in self.ety2.get():
+                        if s=='[':
+                            p.append([])
+                            cache=''
+                        elif s==']':
+                            cache=cache.split(',')
+                            for i in cache:
+                                p[-1].append(int(float(i)) if int(float(i))==eval(i) else eval(i))
+                            cache=''
+                        else:
+                            cache=cache+s
+            else:
+                p=None
+            cost=input2nlist(self.ety3.get()) if self.ety3.get() else None
+            value=input2nlist(self.ety4.get()) if self.ety4.get() else None
+            n=eval(self.ety5.get())
+            res=input2nlist(self.ety6.get()) if self.ety6.get() else None
+            rp=input2nlist(self.ety7.get()) if self.ety7.get() else None
+
+            self.lb8.config(text='达到全收藏的概率是 %.2f %%'%(100*collection(num,p,cost,value).smlt(n,res,rp)))
+        except:
+            showwarning('Warning','存在参数值为空或参数格式存在错误！')
+
+def input2nlist(text):
+    cache=text.split(',')
+    list=[]
+    for i in cache:
+        try:
+            list.append(eval(i))
+        except:
+            showerror('Error','数据格式错误！请输入以英文逗号分隔的数字')
+            return None
+    return list
 
 def prob_ys(n):
     if n<=73:
@@ -581,7 +699,7 @@ class step():
         p_up:up占最高稀有度比例
         ups:up角色数量
         thres:触发保底机制下限
-        most:必出抽数
+        most:必出抽数/触发保底机制后每抽递增概率
         mg:大保底歪几必出 (minimum guarantee); 0为无大保底机制
         '''
         step.p=p
@@ -589,16 +707,15 @@ class step():
         step.ups=ups
         step.thres=thres
         step.mg=mg
-        if most>1:
-            step.most=most
-        else:
-            step.most=round(thres+(1-p)/most)
+        step.most=most
 
     def prob(self,n):
         if n<self.thres:
             return self.p
-        else:
+        elif self.most>1:
             return (1-self.p)*(n-self.thres)/(self.most-self.thres)+self.p
+        else:
+            return self.p+(n-self.thres)*self.most if self.p+(n-self.thres)*self.most<1 else 1
 
     def smlt(self,n,e,detail=False,times=100000):
         '''
@@ -609,34 +726,34 @@ class step():
         #start=time.time()
         
         up=dict()
-        for i in range(times):                              #新狗哥入场
-            insur=0                                         #非酋计数器（大保底计数器）
-            turn=0                                          #小保底计数器
+        for i in range(times):                                  #新狗哥入场
+            insur=0                                             #非酋计数器（大保底计数器）
+            turn=0                                              #小保底计数器
             s=0
-            count=[0 for i in range(self.ups)]              #up计数器
+            count=[0 for i in range(self.ups)]                  #up计数器
             for j in range(n):
                 turn+=1
                 pt=self.prob(turn)
-                cache=random.random()                       #抽卡！
-                if cache<pt:                                #抽中五星
+                cache=random.random()                           #抽卡！
+                if cache<pt:                                    #抽中五星
                     mg_b=True
-                    for k in range(self.ups):
+                    for k in range(self.ups):                   #判断是否是第(k+1)个up
                         if k<=cache*self.ups/pt/self.p_up<(k+1):
                             count[k]+=1
                             insur=0
                             mg_b=False
                             break
                     if self.mg and mg_b:
-                        if insur==self.mg:                  #非酋的强运！（大保底）
+                        if insur==self.mg:                      #非酋的强运！（大保底）
                             for k in range(self.ups):
                                 if (k+(self.ups-k)*self.p_up)<=cache*self.ups/pt<(k+1+(self.ups-k-1)*self.p_up):
                                     count[k]+=1
                                     break
-                            insur=0                         #大保底重置
+                            insur=0                             #大保底重置
                         else:
-                            insur+=1                        #非酋复活甲（大保底激活）
-                            s+=1                            #歪计数器+1                          
-                    turn=0                                  #新轮回开始（保底计数器清零）
+                            insur+=1                            #非酋复活甲（大保底激活）
+                            s+=1                                #歪计数器+1                          
+                    turn=0                                      #新轮回开始（保底计数器清零）
                     
                     if (not detail)and(sum(count)>=sum(e)):
                         if judge_exp(count,e):
@@ -655,8 +772,23 @@ class step():
         
         return eval('%.4f'%(result/times))
 
-    def calc(self,n,e,rel_exp=6):
-        up=[[tuple([0 for i in range(len(e))]),0,0,0,1]]
+    def interplt(self,e,target=0.95,lower=0,upper=None):
+        if upper==None:
+            upper=sum(e)*int((self.most if self.most>1 else self.thres+round((1-p)/self.most))/self.p_up)
+        n=int(lower+(upper-lower)*(target+0.5)/2)
+        p1=self.calc(n,e)
+        p2=self.calc(n+1,e)
+        print(lower,upper,n,p1,p2)
+        if p1<=target<p2:
+            return n+1
+        elif p2<target:
+            return self.interplt(e,target,n,upper,fd)
+        else:
+            return self.interplt(e,target,lower,n,fd)
+
+    def calc(self,n,e,up=None,rel_exp=6):
+        if up is None:
+            up=[[tuple([0 for i in range(len(e))]),0,0,0,1]]
         '''
         up[0]: up结果
         up[1]: 总抽数
@@ -666,7 +798,7 @@ class step():
         '''
         #start=time.time()
 
-        if self.mg and (n>=(self.mg+1)*self.most*sum(e)):
+        if self.mg and (n>=(self.mg+1)*(self.most if self.most>1 else self.thres+round((1-p)/self.most))*sum(e)):
             return 1
         else:
             cache_dict=dict()
@@ -722,6 +854,9 @@ class step():
                                 up.append(cache)
                     cache_dict=dict()
                 i+=1
+
+                if i>=len(up):
+                    break
             
             while i+1<=len(up):
                 if judge_exp(up[i][0],e):
@@ -843,7 +978,6 @@ class collection():
                 for i in range(len(self.level)):
                     for j in range(self.level[i]):
                         self.value.append(value[i])
-            
 
     def smlt(self,n,res=None,rp=None,times=100000):
         '''
@@ -963,7 +1097,7 @@ if __name__=="__main__":
         with open(file,'r',encoding='utf-8') as f:
             lines=f.readlines()
         for line in lines:
-            cache=line.split(',')
+            cache=line[:-1].split(',')
             if cache[0]=='step':
                 step_model[cache[1]]=cache[2:]
             elif cache[0]=='fixed':
@@ -974,19 +1108,3 @@ if __name__=="__main__":
     top=Tk()
     mode=StringVar()
     Ui(top).mainloop()
-
-'''
-p_ys=[]
-ys=step(0.006,0.5,1,73,90,1)
-for i in range(360):
-    p_ys.append(ys.smlt(i,[2],100000))
-    print('%3d %.5f'%(i,p_ys[-1]))
-print(p_ys)
-
-p_mrfz=[]
-mrfz2=step(0.02,0.7,2,50,99,0)
-for i in range(1,401):
-    p_mrfz.append(mrfz2.smlt(i,[1,1]))
-    print('%3d %.5f'%p_mrfz[-1])
-print(p_mrfz)
-'''
