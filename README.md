@@ -2,9 +2,11 @@
 
 本程序旨在为抽卡玩家对抽卡预期和预计资源提供信息<br>
 
-version1.0.0
+version1.0
 ---
-Update: 增加了对于单up卡池抽卡期望对应达成概率的所需抽数计算功能。<br>
+ver 1.0.1 Update: 对达成期望结果概率所需抽数的运算进行了优化，避免了重复运算，加快计算速度<br>
+
+ver 1.0.0 Update: 增加了对于单up卡池抽卡期望对应达成概率的所需抽数计算功能。<br>
 可通过概率递增的UI直接输入，也可在主体程序结束运行后在IDE内输入<br>
 ```
 step(p,p_up,ups,thres,most,mg).interplt(e,target=0.95,lower=0,upper=None)
