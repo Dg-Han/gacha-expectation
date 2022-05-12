@@ -59,7 +59,7 @@ class Ui(Frame):
             self.info.title('有关信息')
             self.info.geometry('320x240')
             self.info.lb1=Label(self.info,text='抽卡期望计算器')
-            self.info.lb2=Label(self.info,text='当前版本: 1.0.0.0 (ver20220508)')
+            self.info.lb2=Label(self.info,text='当前版本: 1.0.1 (ver20220512)')
             self.info.lb3=Label(self.info,text='Copyright by Dg_Han. All Rights Reserved.')
             self.info.lb4=Label(self.info,text='github: https://github.com/Dg-Han')
             self.info.lb1.pack()
@@ -167,6 +167,8 @@ class Ui(Frame):
             self.cmb.config(state='normal')
 
     def step_output(self):
+        global up
+        global up_result
         '''
         p=eval(self.ety1.get())
         p_up=eval(self.ety2.get())
@@ -236,15 +238,19 @@ class Ui(Frame):
                 target=0.95
             
             if ups==1:
-                result=step(p,p_up,ups,thres,most,mg).calc(n,e,None)
+                para_set=step(p,p_up,ups,thres,most,mg)
+                result=para_set.calc(n,e)
+                self.lb10.config(text='计算中... 计算进度 %.2f %%'%(10+10*random.random()))
+                self.update()
                 #nx=step(p,p_up,ups,thres,most,mg).interplt(e,target)
                 lower=0
                 upper=sum(e)*int((most if most>1 else thres+round((1-p)/most))/p_up)
                 fdis=upper-lower
                 while True:
                     n=int(lower+(upper-lower)*(target+0.5)/2)
-                    p1=step(p,p_up,ups,thres,most,mg).calc(n,e)
-                    p2=step(p,p_up,ups,thres,most,mg).calc(n+1,e)
+                    p1=para_set.calc(n,e)
+                    p2=para_set.calc(n+1,e)
+                    #print(lower,upper,n,p1,p2)
                     if p1<target<=p2:
                         nx=n+1
                         break
@@ -520,7 +526,7 @@ class Ui(Frame):
         self.lb7=Label(self.master,text='重复收藏品情况/token数量')
         self.lb5.place(relx=0.1,rely=0.4,relwidth=0.1,relheight=0.05)
         self.lb6.place(relx=0.3,rely=0.4,relwidth=0.1,relheight=0.05)
-        self.lb7.place(relx=0.5,rely=0.4,relwidth=0.1,relheight=0.05)
+        self.lb7.place(relx=0.45,rely=0.4,relwidth=0.2,relheight=0.05)
 
         self.ety5=Entry(self.master)
         self.ety6=Entry(self.master)
@@ -692,7 +698,7 @@ def prob_mrfz(n):
     else:
         return 0.02*n-0.98                          #0.02*(n-50)+0.02
 
-class step():
+class step(Ui):
     def __init__(self,p,p_up,ups,thres,most,mg,*args,**kwargs):
         '''
         p:最高稀有度出率
@@ -708,6 +714,11 @@ class step():
         step.thres=thres
         step.mg=mg
         step.most=most
+
+        global up
+        global up_result
+        up=None
+        up_result=dict()
 
     def prob(self,n):
         if n<self.thres:
@@ -786,8 +797,11 @@ class step():
         else:
             return self.interplt(e,target,lower,n,fd)
 
-    def calc(self,n,e,up=None,rel_exp=6):
-        if up is None:
+    def calc(self,n,e,rel_exp=6):
+        global up
+        global up_result
+        
+        if up==None:
             up=[[tuple([0 for i in range(len(e))]),0,0,0,1]]
         '''
         up[0]: up结果
@@ -801,33 +815,45 @@ class step():
         if self.mg and (n>=(self.mg+1)*(self.most if self.most>1 else self.thres+round((1-p)/self.most))*sum(e)):
             return 1
         else:
+            if tuple([tuple(e),n]) in up_result:
+                return up_result[tuple([tuple(e),n])]
+            
             cache_dict=dict()
             result=0
             max_p=0
             
-            i=0
+            if len(up)==1:
+                i=0
+            else:
+                i=len(up)-1
+                while up[i][1]==up[i-1][1]:
+                    i-=1
+                    if i==0:
+                        break
+                result=up_result.get(tuple([tuple(e),up[i][1]]),0)
+                    
             while up[i][1]<=n-1:
-                cache_dict[tuple([up[i][0],up[i][1]+1,up[i][2]+1,up[i][3]])]=cache_dict.get(tuple([up[i][0],up[i][1]+1,up[i][2]+1,up[i][3]]),0)+up[i][4]*(1-self.prob(up[i][2]+1))
-                if self.mg and (up[i][3]==self.mg):
+                cache_dict[tuple([up[i][0],up[i][1]+1,up[i][2]+1,up[i][3]])]=cache_dict.get(tuple([up[i][0],up[i][1]+1,up[i][2]+1,up[i][3]]),0)+up[i][4]*(1-self.prob(up[i][2]+1))      #未抽中最高稀有度
+                if self.mg and (up[i][3]==self.mg):                                                                                                                                     #大保底
                     for j in range(len(e)):
                         cache=[]
-                        for k in range(len(e)):
+                        for k in range(len(e)):                                                                                                                                         #判断大保底角色
                             if j==k:
                                 cache.append(up[i][0][k]+1)
                             else:
                                 cache.append(up[i][0][k])
-                        if judge_exp(cache,e):
+                        if judge_exp(cache,e):                                                                                                                                          #判断是否达到期望
                             cache_p=up[i][4]*self.prob(up[i][2]+1)/self.ups
                             if cache_p>max_p:
                                 max_p=cache_p
                             result+=cache_p
                         else:
-                            cache_dict[tuple([tuple(cache),up[i][1]+1,0,0])]=cache_dict.get(tuple([tuple(cache),up[i][1]+1,0,0]),0)+up[i][4]*self.prob(up[i][2]+1)/self.ups
+                            cache_dict[tuple([tuple(cache),up[i][1]+1,0,0])]=cache_dict.get(tuple([tuple(cache),up[i][1]+1,0,0]),0)+up[i][4]*self.prob(up[i][2]+1)/self.ups             #未达到期望记录分支
                 else:
-                    cache_dict[tuple([up[i][0],up[i][1]+1,0,up[i][3]+1])]=cache_dict.get(tuple([up[i][0],up[i][1]+1,0,up[i][3]+1]),0)+up[i][4]*self.prob(up[i][2]+1)*(1-self.p_up)
+                    cache_dict[tuple([up[i][0],up[i][1]+1,0,up[i][3]+1])]=cache_dict.get(tuple([up[i][0],up[i][1]+1,0,up[i][3]+1]),0)+up[i][4]*self.prob(up[i][2]+1)*(1-self.p_up)      #歪
                     for j in range(len(e)):
                         cache=[]
-                        for k in range(len(e)):
+                        for k in range(len(e)):                                                                                                                                         #判断up角色
                             if j==k:
                                 cache.append(up[i][0][k]+1)
                             else:
@@ -852,16 +878,12 @@ class step():
                                 cache=list(key)
                                 cache.append(cache_dict[key])
                                 up.append(cache)
+                    up_result[tuple([tuple(e),up[i][1]+1])]=result
                     cache_dict=dict()
                 i+=1
 
                 if i>=len(up):
                     break
-            
-            while i+1<=len(up):
-                if judge_exp(up[i][0],e):
-                    result+=up[i][4]
-                i+=1
 
             #end=time.time()
             #print('Calc %d: Running time: %s seconds.'%(n,end-start))
@@ -1092,6 +1114,8 @@ if __name__=="__main__":
                  }
     
     file="gacha_data.dll"
+    up=None
+    up_result=dict()
 
     try:
         with open(file,'r',encoding='utf-8') as f:
