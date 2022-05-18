@@ -15,6 +15,8 @@ class Ui(Frame):
     global mode
     global file
 
+    label_font='Times\sNew\sRoman -14'
+
     def __init__(self,master=None):
         Frame.__init__(self,master)
         self.master.title('抽卡期望计算器')
@@ -59,7 +61,7 @@ class Ui(Frame):
             self.info.title('有关信息')
             self.info.geometry('320x240')
             self.info.lb1=Label(self.info,text='抽卡期望计算器')
-            self.info.lb2=Label(self.info,text='当前版本: 1.0.1 (ver20220512)')
+            self.info.lb2=Label(self.info,text='当前版本: 1.0.2 (ver20220518)')
             self.info.lb3=Label(self.info,text='Copyright by Dg_Han. All Rights Reserved.')
             self.info.lb4=Label(self.info,text='github: https://github.com/Dg-Han')
             self.info.lb1.pack()
@@ -68,6 +70,7 @@ class Ui(Frame):
             self.info.lb4.pack()
             
     def createWidgets_step(self):
+        
         for widget in self.master.winfo_children():
             if (widget.winfo_class()!='Frame')and(widget.winfo_class()!='Menu'):
                 widget.destroy()
@@ -82,8 +85,8 @@ class Ui(Frame):
         label_list=['最高稀有度出率','up占最高稀有度比例','up角色数量','触发概率递增机制抽数','必出抽数/每抽递增概率','大保底歪几必出\n0为无大保底机制']
 
         for i in range(6):
-            self.lb=Label(self.master,text=label_list[i])
-            self.lb.place(relx=0.15*i+0.025,rely=0.225,relwidth=0.15,relheight=0.05)
+            self.lb=Label(self.master,text=label_list[i],font=self.label_font)
+            self.lb.place(relx=0.15*i+0.025,rely=0.275,relwidth=0.15,relheight=0.05)
 
         self.ety1=Entry(self.master)
         self.ety2=Entry(self.master)
@@ -91,12 +94,12 @@ class Ui(Frame):
         self.ety4=Entry(self.master)
         self.ety5=Entry(self.master)
         self.ety6=Entry(self.master)
-        self.ety1.place(relx=0.05,rely=0.3,relwidth=0.1,relheight=0.05)
-        self.ety2.place(relx=0.2,rely=0.3,relwidth=0.1,relheight=0.05)
-        self.ety3.place(relx=0.35,rely=0.3,relwidth=0.1,relheight=0.05)
-        self.ety4.place(relx=0.5,rely=0.3,relwidth=0.1,relheight=0.05)
-        self.ety5.place(relx=0.65,rely=0.3,relwidth=0.1,relheight=0.05)
-        self.ety6.place(relx=0.8,rely=0.3,relwidth=0.1,relheight=0.05)
+        self.ety1.place(relx=0.05,rely=0.35,relwidth=0.1,relheight=0.05)
+        self.ety2.place(relx=0.2,rely=0.35,relwidth=0.1,relheight=0.05)
+        self.ety3.place(relx=0.35,rely=0.35,relwidth=0.1,relheight=0.05)
+        self.ety4.place(relx=0.5,rely=0.35,relwidth=0.1,relheight=0.05)
+        self.ety5.place(relx=0.65,rely=0.35,relwidth=0.1,relheight=0.05)
+        self.ety6.place(relx=0.8,rely=0.35,relwidth=0.1,relheight=0.05)
         self.ety1.bind('<KeyRelease>',self.check_step)
         self.ety2.bind('<KeyRelease>',self.check_step)
         self.ety3.bind('<KeyRelease>',self.check_step)
@@ -104,32 +107,32 @@ class Ui(Frame):
         self.ety5.bind('<KeyRelease>',self.check_step)
         self.ety6.bind('<KeyRelease>',self.check_step)
 
-        self.lb7=Label(self.master,text='总抽数')
-        self.lb8=Label(self.master,text='期望结果\n多up角色数量间用逗号分隔')
-        self.lb7.place(relx=0.1,rely=0.4,relwidth=0.1,relheight=0.05)
-        self.lb8.place(relx=0.25,rely=0.4,relwidth=0.2,relheight=0.05)
-        self.lb9=Label(self.master,text='期望结果概率\n默认为95%')
-        self.lb9.place(relx=0.5,rely=0.4,relwidth=0.1,relheight=0.05)
+        self.lb7=Label(self.master,text='总抽数',font=self.label_font)
+        self.lb8=Label(self.master,text='期望结果\n多up角色数量间用逗号分隔',font=self.label_font)
+        self.lb9=Label(self.master,text='期望结果概率\n默认为95%',font=self.label_font)
+        self.lb7.place(relx=0.1,rely=0.45,relwidth=0.1,relheight=0.05)
+        self.lb8.place(relx=0.25,rely=0.45,relwidth=0.2,relheight=0.05)
+        self.lb9.place(relx=0.5,rely=0.45,relwidth=0.1,relheight=0.05)
         self.ety7=Entry(self.master)
         self.ety8=Entry(self.master)
         self.ety9=Entry(self.master)
-        self.ety7.place(relx=0.1,rely=0.475,relwidth=0.1,relheight=0.05)
-        self.ety8.place(relx=0.3,rely=0.475,relwidth=0.1,relheight=0.05)
-        self.ety9.place(relx=0.5,rely=0.475,relwidth=0.1,relheight=0.05)
+        self.ety7.place(relx=0.1,rely=0.525,relwidth=0.1,relheight=0.05)
+        self.ety8.place(relx=0.3,rely=0.525,relwidth=0.1,relheight=0.05)
+        self.ety9.place(relx=0.5,rely=0.525,relwidth=0.1,relheight=0.05)
         self.ety7.bind('<KeyRelease>',self.check_step)
         self.ety8.bind('<FocusOut>',self.test)
         self.ety9.bind('<FocusOut>',self.check_step)
 
-        self.btn1=Button(self.master,text='计算',command=lambda: self.step_output())
-        self.btn1.place(relx=0.7,rely=0.45,relwidth=0.2,relheight=0.1)
+        self.btn1=Button(self.master,text='计算',font='Times\sNew\sRoman -20',command=lambda: self.step_output())
+        self.btn1.place(relx=0.7,rely=0.5,relwidth=0.2,relheight=0.1)
         self.btn1.bind('<Return>',lambda: self.step_output())
         self.btn2=Button(self.master,text='保存模板',command=lambda: self.save_step_model())
-        self.btn2.place(relx=0.85,rely=0.05,relwidth=0.1,relheight=0.05)
+        self.btn2.place(relx=0.85,rely=0.0625,relwidth=0.1,relheight=0.05)
         self.btn3=Button(self.master,text='删除模板',command=lambda: self.delete_step_model())
-        self.btn3.place(relx=0.85,rely=0.15,relwidth=0.1,relheight=0.05)
+        self.btn3.place(relx=0.85,rely=0.1375,relwidth=0.1,relheight=0.05)
 
-        self.lb10=Label(self.master,text='')
-        self.lb10.place(relx=0.25,rely=0.7,relwidth=0.5,relheight=0.1)
+        self.lb10=Label(self.master,text='',font='Times\sNew\sRoman -18')
+        self.lb10.place(relx=0.25,rely=0.75,relwidth=0.5,relheight=0.1)
         
     def set_step_para(self,event=None):
         self.ety1.config(state='normal')
@@ -263,13 +266,15 @@ class Ui(Frame):
                         self.lb10.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
                         self.update()
                     
-                self.lb10.config(text='达到预期抽卡结果的概率是 %.2f %%\n达到 %d%% 出率的所需抽数为 %d'%(100*result,int(100*target),nx))
+                self.lb10.config(text='达到预期抽卡结果的概率是 %.2f %%\n%s\n达到 %d%% 出率的所需抽数为 %d'%(100*result,self.p_return(result),int(100*target),nx))
             else:
                 self.lb10.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).smlt(n,e)))
         except SyntaxError:
             showerror('Error','存在参数值为空！')
         except TypeError:
             showerror('Error','期望结果输入格式错误！')
+        except:
+            showerror('Error','未知错误！')
 
     def check_step(self,event):
         if self.ety1.get():
@@ -294,7 +299,7 @@ class Ui(Frame):
                 self.ety3.delete(len(self.ety3.get())-1,END)
         if self.ety4.get():
             if not self.ety4.get()[-1].isnumeric():
-                showwarning('Warning','4请输入数字！')
+                showwarning('Warning','请输入数字！')
                 self.ety4.delete(len(self.ety4.get())-1,END)
         if self.ety5.get():
             try:
@@ -304,11 +309,11 @@ class Ui(Frame):
                 self.ety5.delete(len(self.ety5.get())-1,END)
         if self.ety6.get():
             if not self.ety6.get()[-1].isnumeric():
-                showwarning('Warning','6请输入整数！')
+                showwarning('Warning','请输入整数！')
                 self.ety6.delete(len(self.ety6.get())-1,END)
         if self.ety7.get():
             if not self.ety7.get()[-1].isnumeric():
-                showwarning('Warning','7请输入整数！')
+                showwarning('Warning','请输入整数！')
                 self.ety7.delete(len(self.ety7.get())-1,END)
         if self.ety9.get():
             try:
@@ -390,41 +395,45 @@ class Ui(Frame):
         self.cmb.place(relx=0.7,rely=0.1,relwidth=0.1,relheight=0.05)
         self.cmb.set('')
 
-        self.lb1=Label(self.master,text='最高稀有度出率')
-        self.lb2=Label(self.master,text='up角色出率')
-        self.lb3=Label(self.master,text='保底抽数,0为无保底机制')
-        self.lb1.place(relx=0.1,rely=0.2,relwidth=0.1,relheight=0.05)
-        self.lb2.place(relx=0.3,rely=0.2,relwidth=0.1,relheight=0.05)
-        self.lb3.place(relx=0.5,rely=0.2,relwidth=0.1,relheight=0.05)
+        self.lb1=Label(self.master,text='最高稀有度出率',font=self.label_font)
+        self.lb2=Label(self.master,text='up角色出率',font=self.label_font)
+        self.lb3=Label(self.master,text='保底抽数\n0为无保底机制',font=self.label_font)
+        self.lb1.place(relx=0.1,rely=0.25,relwidth=0.1,relheight=0.05)
+        self.lb2.place(relx=0.3,rely=0.25,relwidth=0.1,relheight=0.05)
+        self.lb3.place(relx=0.45,rely=0.25,relwidth=0.2,relheight=0.05)
 
         self.ety1=Entry(self.master)
         self.ety2=Entry(self.master)
         self.ety3=Entry(self.master)
-        self.ety1.place(relx=0.1,rely=0.3,relwidth=0.1,relheight=0.05)
-        self.ety2.place(relx=0.3,rely=0.3,relwidth=0.1,relheight=0.05)
-        self.ety3.place(relx=0.5,rely=0.3,relwidth=0.1,relheight=0.05)
+        self.ety1.place(relx=0.1,rely=0.325,relwidth=0.1,relheight=0.05)
+        self.ety2.place(relx=0.3,rely=0.325,relwidth=0.1,relheight=0.05)
+        self.ety3.place(relx=0.5,rely=0.325,relwidth=0.1,relheight=0.05)
         self.ety1.bind('<KeyRelease>',self.check_fixed)
         self.ety2.bind('<KeyRelease>',self.check_fixed)
         self.ety3.bind('<KeyRelease>',self.check_fixed)
 
-        self.lb4=Label(self.master,text='总抽数')
-        self.lb5=Label(self.master,text='期望结果')
-        self.lb4.place(relx=0.2,rely=0.4,relwidth=0.1,relheight=0.05)
-        self.lb5.place(relx=0.4,rely=0.4,relwidth=0.1,relheight=0.05)
+        self.lb4=Label(self.master,text='总抽数',font=self.label_font)
+        self.lb5=Label(self.master,text='期望结果',font=self.label_font)
+        self.lb4.place(relx=0.2,rely=0.45,relwidth=0.1,relheight=0.05)
+        self.lb5.place(relx=0.4,rely=0.45,relwidth=0.1,relheight=0.05)
         self.ety4=Entry(self.master)
         self.ety5=Entry(self.master)
-        self.ety4.place(relx=0.2,rely=0.5,relwidth=0.1,relheight=0.05)
-        self.ety5.place(relx=0.4,rely=0.5,relwidth=0.1,relheight=0.05)
+        self.ety4.place(relx=0.2,rely=0.525,relwidth=0.1,relheight=0.05)
+        self.ety5.place(relx=0.4,rely=0.525,relwidth=0.1,relheight=0.05)
         self.ety4.bind('<KeyRelease>',self.check_fixed)
         self.ety5.bind('<KeyRelease>',self.check_fixed)
 
-        self.lb6=Label(self.master,text='')
-        self.lb6.place(relx=0.25,rely=0.7,relwidth=0.5,relheight=0.1)
+        self.lb6=Label(self.master,text='',font='Times\sNew\sRoman -18')
+        self.lb6.place(relx=0.25,rely=0.75,relwidth=0.5,relheight=0.1)
 
-        self.btn1=Button(self.master,text='计算',command=lambda: self.fixed_output())
-        self.btn1.place(relx=0.7,rely=0.45,relwidth=0.2,relheight=0.1)
+        self.btn1=Button(self.master,text='计算',command=lambda: self.fixed_output(),font='Times\sNew\sRoman -20')
+        self.btn1.place(relx=0.7,rely=0.5,relwidth=0.2,relheight=0.1)
+        self.btn2=Button(self.master,text='保存模板',command=lambda: self.save_fixed_model())
+        self.btn2.place(relx=0.85,rely=0.0625,relwidth=0.1,relheight=0.05)
+        self.btn3=Button(self.master,text='删除模板',command=lambda: self.delete_fixed_model())
+        self.btn3.place(relx=0.85,rely=0.1375,relwidth=0.1,relheight=0.05)
 
-    def set_fixed_para(self,event):
+    def set_fixed_para(self,event=None):
         self.ety1.config(state='normal')
         self.ety2.config(state='normal')
         self.ety3.config(state='normal')
@@ -486,6 +495,45 @@ class Ui(Frame):
         except:
             showerror('Error','存在参数值输入错误！')
 
+    def save_fixed_model(self):
+        if self.cmb.get() in fixed_model.keys():
+            showwarning('Warning','保存模板名称与已有模板重复！')
+        else:
+            if self.cmb.get() and self.ety1.get() and self.ety2.get() and self.ety3.get():
+                with open(file,'a',encoding='utf-8') as f:
+                    f.write(','.join(['fixed',self.cmb.get(),
+                                      self.ety1.get(),
+                                      self.ety2.get(),
+                                      self.ety3.get()]))
+                    f.write('\n')
+                fixed_model[self.cmb.get()]=[self.ety1.get(),self.ety2.get(),self.ety3.get()]
+                
+                name_list=self.fixed_cmb_value()
+                self.cmb['value']=name_list
+                self.cmb.current(len(name_list)-2)
+                self.set_fixed_para()
+            else:
+                showwarning('Warning','存在卡池参数值为空！')
+
+    def delete_fixed_model(self):
+        if self.cmb.get() not in fixed_model.keys():
+            showerror('Error','无已有模板！')
+        elif self.cmb.get() in ['PCR','blhx']:
+            showwarning('Warning','初始模板不可删除！')
+        else:                                               #self.cmb.get() in step_model.keys()
+            with open(file,'r',encoding='utf-8') as f:
+                lines=f.readlines()
+            with open(file,'w',encoding='utf-8') as f:
+                for line in lines:
+                    if self.cmb.get() not in line:
+                        f.write(line)
+            del fixed_model[self.cmb.get()]
+
+            name_list=self.fixed_cmb_value()
+            self.cmb['value']=name_list
+            self.cmb.set('')
+            self.set_fixed_para()
+
     def fixed_cmb_value(self):
         global fixed_model
         
@@ -499,50 +547,46 @@ class Ui(Frame):
             if (widget.winfo_class()!='Frame')and(widget.winfo_class()!='Menu'):
                 widget.destroy()
 
-        self.lb1=Label(self.master,text='收藏品总数')
-        self.lb2=Label(self.master,text='收藏品获得概率')
-        self.lb3=Label(self.master,text='兑换new所需token')
-        self.lb4=Label(self.master,text='重复收藏品获得token')
-        self.lb1.place(relx=0.1,rely=0.2,relwidth=0.1,relheight=0.05)
-        self.lb2.place(relx=0.3,rely=0.2,relwidth=0.1,relheight=0.05)
-        self.lb3.place(relx=0.5,rely=0.2,relwidth=0.1,relheight=0.05)
-        self.lb4.place(relx=0.7,rely=0.2,relwidth=0.1,relheight=0.05)
+        label_list=['收藏品总数','收藏品获得概率','兑换new所需token','重复收藏品转换token']
+        for i in range(4):
+            self.lb=Label(self.master,text=label_list[i],font=self.label_font)
+            self.lb.place(relx=0.2*i+0.05,rely=0.25,relwidth=0.2,relheight=0.05)
 
         self.ety1=Entry(self.master)
         self.ety2=Entry(self.master)
         self.ety3=Entry(self.master)
         self.ety4=Entry(self.master)
-        self.ety1.place(relx=0.1,rely=0.3,relwidth=0.1,relheight=0.05)
-        self.ety2.place(relx=0.3,rely=0.3,relwidth=0.1,relheight=0.05)
-        self.ety3.place(relx=0.5,rely=0.3,relwidth=0.1,relheight=0.05)
-        self.ety4.place(relx=0.7,rely=0.3,relwidth=0.1,relheight=0.05)
+        self.ety1.place(relx=0.1,rely=0.325,relwidth=0.1,relheight=0.05)
+        self.ety2.place(relx=0.3,rely=0.325,relwidth=0.1,relheight=0.05)
+        self.ety3.place(relx=0.5,rely=0.325,relwidth=0.1,relheight=0.05)
+        self.ety4.place(relx=0.7,rely=0.325,relwidth=0.1,relheight=0.05)
         self.ety1.bind('<FocusOut>',self.check_collection)
         self.ety2.bind('<FocusOut>',self.check_collection)
         self.ety3.bind('<FocusOut>',self.check_collection)
         self.ety4.bind('<FocusOut>',self.check_collection)
 
-        self.lb5=Label(self.master,text='总抽数')
-        self.lb6=Label(self.master,text='已有收藏品情况')
-        self.lb7=Label(self.master,text='重复收藏品情况/token数量')
-        self.lb5.place(relx=0.1,rely=0.4,relwidth=0.1,relheight=0.05)
-        self.lb6.place(relx=0.3,rely=0.4,relwidth=0.1,relheight=0.05)
-        self.lb7.place(relx=0.45,rely=0.4,relwidth=0.2,relheight=0.05)
+        self.lb5=Label(self.master,text='总抽数',font=self.label_font)
+        self.lb6=Label(self.master,text='已有收藏品情况',font=self.label_font)
+        self.lb7=Label(self.master,text='重复收藏品情况/token数量',font=self.label_font)
+        self.lb5.place(relx=0.1,rely=0.45,relwidth=0.1,relheight=0.05)
+        self.lb6.place(relx=0.3,rely=0.45,relwidth=0.1,relheight=0.05)
+        self.lb7.place(relx=0.45,rely=0.45,relwidth=0.2,relheight=0.05)
 
         self.ety5=Entry(self.master)
         self.ety6=Entry(self.master)
         self.ety7=Entry(self.master)
-        self.ety5.place(relx=0.1,rely=0.5,relwidth=0.1,relheight=0.05)
-        self.ety6.place(relx=0.3,rely=0.5,relwidth=0.1,relheight=0.05)
-        self.ety7.place(relx=0.5,rely=0.5,relwidth=0.1,relheight=0.05)
+        self.ety5.place(relx=0.1,rely=0.525,relwidth=0.1,relheight=0.05)
+        self.ety6.place(relx=0.3,rely=0.525,relwidth=0.1,relheight=0.05)
+        self.ety7.place(relx=0.5,rely=0.525,relwidth=0.1,relheight=0.05)
         self.ety5.bind('<FocusOut>',self.check_collection)
         self.ety6.bind('<FocusOut>',self.check_collection)
         self.ety7.bind('<FocusOut>',self.check_collection)
 
-        self.lb8=Label(self.master,text='')
-        self.lb8.place(relx=0.25,rely=0.7,relwidth=0.5,relheight=0.1)
+        self.lb8=Label(self.master,text='',font='Times\sNew\sRoman -18')
+        self.lb8.place(relx=0.25,rely=0.75,relwidth=0.5,relheight=0.1)
 
-        self.btn1=Button(self.master,text='计算',command=lambda: self.collection_output())
-        self.btn1.place(relx=0.7,rely=0.45,relwidth=0.2,relheight=0.1)
+        self.btn1=Button(self.master,text='计算',command=lambda: self.collection_output(),font='Times\sNew\sRoman -20')
+        self.btn1.place(relx=0.7,rely=0.5,relwidth=0.2,relheight=0.1)
         self.btn2=Button(self.master,text='添加收藏品属性',command=lambda: self.collect_collection())
         self.btn2.place(relx=0.8,rely=0.1,relwidth=0.1,relheight=0.05)
 
@@ -674,6 +718,20 @@ class Ui(Frame):
             self.lb8.config(text='达到全收藏的概率是 %.2f %%'%(100*collection(num,p,cost,value).smlt(n,res,rp)))
         except:
             showwarning('Warning','存在参数值为空或参数格式存在错误！')
+
+    def p_return(self,p):
+        if p<.05:
+            return "抽数不是问题，能不能成为海豹才是问题"
+        elif p<.25:
+            return "小抽怡情，强抽吃土"
+        elif p<.5:
+            return "出货的为什么不能是我呢"
+        elif p<.75:
+            return "概率过半了好诶"
+        elif p<.95:
+            return "已经能看到老婆（划掉）了"
+        else:
+            return "这还能沉了不成"
 
 def input2nlist(text):
     cache=text.split(',')
