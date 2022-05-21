@@ -2,27 +2,46 @@
 
 本程序旨在为抽卡玩家对抽卡预期和预计资源提供信息<br>
 
+## version 1.1
+
+### ver 1.1.0
+
+Update: 
+* 增加了对于单up池概率曲线的分析，默认输出up期望为1,2,3时的概率曲线
+* 补充了初始抽数的参数输入
+* 对输入合法性判断的结构逻辑进行了改写<br>
+
+多up池概率曲线以及自定义分析内容等功能尚在开发中<br>
+
 ## version 1.0
 
 ### ver 1.0.2
-Update: 增加了对于不同达成目标期望的文案，并进行了一定的UI更改，以及固定概率卡池模型保存/删除模板功能的完善<br>
+<details>
+<summary>Little Updates</summary>
+  
+* 增加了对于不同达成目标期望的文案
+* 一定的UI更改
+* 完善补充了固定概率卡池模型保存/删除模板功能
+  </details>
 
 ### ver 1.0.1
 Update: 对达成期望结果概率所需抽数的运算进行了优化，避免了重复运算，加快计算速度<br>
 
 ### ver 1.0.0
-Update: 增加了对于单up卡池抽卡期望对应达成概率的所需抽数计算功能。<br>
+Update:
+* 增加了对于单up卡池抽卡期望对应达成概率的所需抽数计算功能<br>
+
 可通过概率递增的UI直接输入，也可在主体程序结束运行后在IDE内输入<br>
 ```
 step(p,p_up,ups,thres,most,mg).interplt(e,target=0.95,lower=0,upper=None)
 ```
 >e为抽卡期望结果（数组形式）<br>
 >target为达成概率<br>
->lower,upper为抽数上下界，upper=None时会初始化为sum(e) * int((self.most if self.most>1 else self.thres+round((1-p)/self.most)) / self.p_up)<br>
+>lower, upper为抽数上下界，upper=None时会自动进行初始化<br>
 
 结果返回最小的达成期望概率为95%的抽数<br>
 
-发布第一个正式可运行文件版本<br>
+* 发布第一个正式可运行文件版本<br>
 
 ## ver 0.x
 ### version 0.1.7.0
@@ -125,5 +144,3 @@ bound(p,p_up,most).prob(n)
 
 ### version 0.1.0
 `gacha.py`程序主体运行为原神抽卡计算器，通过大样本频率趋近于概率的方式进行相应概率计算<br>
-
-未来更新预计为更多抽卡概率模型（可变概率，固定概率有保底/无保底，收藏品兑换……）提供支持，并提供自定义抽卡概率模型结果测算
