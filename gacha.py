@@ -5,6 +5,7 @@ import random
 import math
 import time
 
+import matplotlib.pyplot as plt
 from tkinter import *
 from tkinter import ttk
 from tkinter.messagebox import *
@@ -61,7 +62,7 @@ class Ui(Frame):
             self.info.title('有关信息')
             self.info.geometry('320x240')
             self.info.lb1=Label(self.info,text='抽卡期望计算器')
-            self.info.lb2=Label(self.info,text='当前版本: 1.0.2 (ver20220518)')
+            self.info.lb2=Label(self.info,text='当前版本: 1.1.0 (ver20220521)')
             self.info.lb3=Label(self.info,text='Copyright by Dg_Han. All Rights Reserved.')
             self.info.lb4=Label(self.info,text='github: https://github.com/Dg-Han')
             self.info.lb1.pack()
@@ -70,7 +71,7 @@ class Ui(Frame):
             self.info.lb4.pack()
             
     def createWidgets_step(self):
-        
+        #清除控件
         for widget in self.master.winfo_children():
             if (widget.winfo_class()!='Frame')and(widget.winfo_class()!='Menu'):
                 widget.destroy()
@@ -109,30 +110,36 @@ class Ui(Frame):
 
         self.lb7=Label(self.master,text='总抽数',font=self.label_font)
         self.lb8=Label(self.master,text='期望结果\n多up角色数量间用逗号分隔',font=self.label_font)
-        self.lb9=Label(self.master,text='期望结果概率\n默认为95%',font=self.label_font)
-        self.lb7.place(relx=0.1,rely=0.45,relwidth=0.1,relheight=0.05)
-        self.lb8.place(relx=0.25,rely=0.45,relwidth=0.2,relheight=0.05)
-        self.lb9.place(relx=0.5,rely=0.45,relwidth=0.1,relheight=0.05)
+        self.lb9=Label(self.master,text='未出最高稀有度角色抽数\n默认为0',font=self.label_font)
+        self.lb10=Label(self.master,text='期望结果概率\n默认为95%',font=self.label_font)
+        self.lb7.place(relx=0.05,rely=0.45,relwidth=0.1,relheight=0.05)
+        self.lb8.place(relx=0.175,rely=0.45,relwidth=0.15,relheight=0.05)
+        self.lb9.place(relx=0.325,rely=0.45,relwidth=0.15,relheight=0.05)
+        self.lb10.place(relx=0.5,rely=0.45,relwidth=0.1,relheight=0.05)
         self.ety7=Entry(self.master)
         self.ety8=Entry(self.master)
         self.ety9=Entry(self.master)
-        self.ety7.place(relx=0.1,rely=0.525,relwidth=0.1,relheight=0.05)
-        self.ety8.place(relx=0.3,rely=0.525,relwidth=0.1,relheight=0.05)
-        self.ety9.place(relx=0.5,rely=0.525,relwidth=0.1,relheight=0.05)
+        self.ety10=Entry(self.master)
+        self.ety7.place(relx=0.05,rely=0.525,relwidth=0.1,relheight=0.05)
+        self.ety8.place(relx=0.2,rely=0.525,relwidth=0.1,relheight=0.05)
+        self.ety9.place(relx=0.35,rely=0.525,relwidth=0.1,relheight=0.05)
+        self.ety10.place(relx=0.5,rely=0.525,relwidth=0.1,relheight=0.05)
         self.ety7.bind('<KeyRelease>',self.check_step)
-        self.ety8.bind('<FocusOut>',self.test)
+        self.ety8.bind('<KeyRelease>',self.check_step)
         self.ety9.bind('<FocusOut>',self.check_step)
+        self.ety10.bind('<FocusOut>',self.check_step)
 
         self.btn1=Button(self.master,text='计算',font='Times\sNew\sRoman -20',command=lambda: self.step_output())
         self.btn1.place(relx=0.7,rely=0.5,relwidth=0.2,relheight=0.1)
-        self.btn1.bind('<Return>',lambda: self.step_output())
         self.btn2=Button(self.master,text='保存模板',command=lambda: self.save_step_model())
-        self.btn2.place(relx=0.85,rely=0.0625,relwidth=0.1,relheight=0.05)
+        self.btn2.place(relx=0.85,rely=0.025,relwidth=0.1,relheight=0.05)
         self.btn3=Button(self.master,text='删除模板',command=lambda: self.delete_step_model())
-        self.btn3.place(relx=0.85,rely=0.1375,relwidth=0.1,relheight=0.05)
+        self.btn3.place(relx=0.85,rely=0.1,relwidth=0.1,relheight=0.05)
+        self.btn4=Button(self.master,text='分析卡池曲线',command=lambda: self.analysis_step())
+        self.btn4.place(relx=0.85,rely=0.175,relwidth=0.1,relheight=0.05)
 
-        self.lb10=Label(self.master,text='',font='Times\sNew\sRoman -18')
-        self.lb10.place(relx=0.25,rely=0.75,relwidth=0.5,relheight=0.1)
+        self.lb11=Label(self.master,text='',font='Times\sNew\sRoman -18')
+        self.lb11.place(relx=0.25,rely=0.75,relwidth=0.5,relheight=0.1)
         
     def set_step_para(self,event=None):
         self.ety1.config(state='normal')
@@ -141,15 +148,9 @@ class Ui(Frame):
         self.ety4.config(state='normal')
         self.ety5.config(state='normal')
         self.ety6.config(state='normal')
-        self.ety1.delete(0,END)
-        self.ety2.delete(0,END)
-        self.ety3.delete(0,END)
-        self.ety4.delete(0,END)
-        self.ety5.delete(0,END)
-        self.ety6.delete(0,END)
-        self.ety7.delete(0,END)
-        self.ety8.delete(0,END)
-        self.ety9.delete(0,END)
+        for widget in self.master.winfo_children():
+            if widget.winfo_class()=='Entry':
+                widget.delete(0,END)
         
         m=mode.get()
         if m in step_model.keys():
@@ -172,52 +173,7 @@ class Ui(Frame):
     def step_output(self):
         global up
         global up_result
-        '''
-        p=eval(self.ety1.get())
-        p_up=eval(self.ety2.get())
-        ups=eval(self.ety3.get())
-        thres=eval(self.ety4.get())
-        most=eval(self.ety5.get())
-        mg=eval(self.ety6.get())
-        n=eval(self.ety7.get())
-        e=[0]
-        for c in self.ety8.get():
-            if (48<=ord(c)<=57):
-                e[-1]=10*e[-1]+eval(c)
-            elif c==',':
-                e.append(0)
-        #print(p,p_up,ups,thres,most,mg,n,e)
-        if self.ety9.get():
-            target=eval(self.ety9.get()) if eval(self.ety9.get())<=1 else eval(self.ety9.get())/100
-        else:
-            target=0.95
         
-        if ups==1:
-            result=step(p,p_up,ups,thres,most,mg).calc(n,e,None)
-            #nx=step(p,p_up,ups,thres,most,mg).interplt(e,target)
-            lower=0
-            upper=sum(e)*int((most if most>1 else thres+round((1-p)/most))/p_up)
-            fdis=upper-lower
-            while True:
-                n=int(lower+(upper-lower)*(target+0.5)/2)
-                p1=step(p,p_up,ups,thres,most,mg).calc(n,e)
-                p2=step(p,p_up,ups,thres,most,mg).calc(n+1,e)
-                if p1<target<=p2:
-                    nx=n+1
-                    break
-                elif p2<target:
-                    lower=n
-                    self.lb10.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
-                    self.update()
-                else:
-                    upper=n
-                    self.lb10.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
-                    self.update()
-                
-            self.lb10.config(text='达到预期抽卡结果的概率是 %.2f %%\n达到 %d%% 出率的所需抽数为 %d'%(100*result,int(100*target),nx))
-        else:
-            self.lb10.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).smlt(n,e)))
-        '''
         try:
             p=eval(self.ety1.get())
             p_up=eval(self.ety2.get())
@@ -235,17 +191,18 @@ class Ui(Frame):
                 elif c not in [' ']:
                     raise TypeError
             #print(p,p_up,ups,thres,most,mg,n,e)
-            if self.ety9.get():
+            t=eval(self.ety9.get()) if self.ety9.get() else 0
+            if self.ety10.get():
                 target=eval(self.ety9.get()) if eval(self.ety9.get())<=1 else eval(self.ety9.get())/100
             else:
                 target=0.95
             
             if ups==1:
                 para_set=step(p,p_up,ups,thres,most,mg)
-                result=para_set.calc(n,e)
-                self.lb10.config(text='计算中... 计算进度 %.2f %%'%(10+10*random.random()))
+                result=para_set.calc(n,e,t)
+                self.lb11.config(text='计算中... 计算进度 %.2f %%'%(10+10*random.random()))
                 self.update()
-                #nx=step(p,p_up,ups,thres,most,mg).interplt(e,target)
+                #nx=step(p,p_up,ups,thres,most,mg).clmp_n(e,target)
                 lower=0
                 upper=sum(e)*int((most if most>1 else thres+round((1-p)/most))/p_up)
                 fdis=upper-lower
@@ -259,16 +216,16 @@ class Ui(Frame):
                         break
                     elif p2<target:
                         lower=n
-                        self.lb10.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
+                        self.lb11.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
                         self.update()
                     else:
                         upper=n
-                        self.lb10.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
+                        self.lb11.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
                         self.update()
                     
-                self.lb10.config(text='达到预期抽卡结果的概率是 %.2f %%\n%s\n达到 %d%% 出率的所需抽数为 %d'%(100*result,self.p_return(result),int(100*target),nx))
+                self.lb11.config(text='达到预期抽卡结果的概率是 %.2f %%\n%s\n达到 %d%% 出率的所需抽数为 %d'%(100*result,self.p_return(result),int(100*target),nx))
             else:
-                self.lb10.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).smlt(n,e)))
+                self.lb11.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*step(p,p_up,ups,thres,most,mg).smlt(n,e)))
         except SyntaxError:
             showerror('Error','存在参数值为空！')
         except TypeError:
@@ -276,62 +233,70 @@ class Ui(Frame):
         except:
             showerror('Error','未知错误！')
 
-    def check_step(self,event):
+    def check_step(self,event=None):
         if self.ety1.get():
             try:
-                if eval(self.ety1.get())>1:
-                    showwarning('Warning','请输入0-1之间的数')
+                if not check_input(self.ety1.get(),'p'):
                     self.ety1.delete(0,END)
             except:
-                showwarning('Warning','数据类型错误！请输入0-1之间的数')
                 self.ety1.delete(len(self.ety1.get())-1,END)
         if self.ety2.get():
             try:
-                if eval(self.ety2.get())>1:
-                    showwarning('Warning','请输入0-1之间的数')
+                if not check_input(self.ety2.get(),'p'):
                     self.ety2.delete(0,END)
             except:
-                showwarning('Warning','数据类型错误！请输入0-1之间的数')
                 self.ety2.delete(len(self.ety2.get())-1,END)
         if self.ety3.get():
-            if not self.ety3.get()[-1].isnumeric():
-                showwarning('Warning','请输入整数！')
+            try:
+                if not check_input(self.ety3.get(),'N'):
+                    self.ety3.delete(len(self.ety3.get())-1,END)
+            except:
                 self.ety3.delete(len(self.ety3.get())-1,END)
         if self.ety4.get():
-            if not self.ety4.get()[-1].isnumeric():
-                showwarning('Warning','请输入数字！')
+            try:
+                if not check_input(self.ety4.get(),'N'):
+                    self.ety4.delete(len(self.ety4.get())-1,END)
+            except:
                 self.ety4.delete(len(self.ety4.get())-1,END)
         if self.ety5.get():
             try:
-                eval(self.ety5.get())
+                if not check_input(self.ety5.get(),'f'):
+                    self.ety5.delete(len(self.ety5.get())-1,END)
             except:
-                showwarning('Warning','数据类型错误！请输入数字')
                 self.ety5.delete(len(self.ety5.get())-1,END)
         if self.ety6.get():
-            if not self.ety6.get()[-1].isnumeric():
-                showwarning('Warning','请输入整数！')
+            try:
+                if not check_input(self.ety6.get(),'N'):
+                    self.ety6.delete(len(self.ety6.get())-1,END)
+            except:
                 self.ety6.delete(len(self.ety6.get())-1,END)
         if self.ety7.get():
-            if not self.ety7.get()[-1].isnumeric():
-                showwarning('Warning','请输入整数！')
+            try:
+                if not check_input(self.ety7.get(),'N'):
+                    self.ety7.delete(len(self.ety7.get())-1,END)
+            except:
                 self.ety7.delete(len(self.ety7.get())-1,END)
+        if self.ety8.get():
+            try:
+                if not check_input(self.ety8.get(),'N'):
+                    self.ety8.delete(len(self.ety8.get())-1,END)
+            except:
+                self.ety8.delete(len(self.ety8.get())-1,END)
         if self.ety9.get():
             try:
-                if eval(self.ety9.get())>100 or eval(self.ety9.get())<0:
-                    showwarning('Warning','请输入百分比或概率！')
-                    self.ety9.delete(0,END)
-            except:
-                showerror('Error','数据类型错误！请输入百分比或概率')
-                self.ety9.delete(0,END)
-
-    def test(self,event):
-        try:
-            if self.ety8.get():
-                list=input2nlist(self.ety8.get())
+                list=input2nlist(self.ety9.get())
                 if len(list)!=eval(self.ety3.get()):
                     showwarning('Warning','输入期望数量与up角色数量不符！')
-        except:
-            pass
+            except:
+                pass
+        if self.ety10.get():
+            try:
+                if eval(self.ety10.get())>100 or eval(self.ety10.get())<0:
+                    showwarning('Warning','请输入百分比或概率！')
+                    self.ety10.delete(0,END)
+            except:
+                showerror('Error','数据类型错误！请输入百分比或概率')
+                self.ety10.delete(0,END)
 
     def save_step_model(self):
         if self.cmb.get() in step_model.keys():
@@ -382,6 +347,92 @@ class Ui(Frame):
         cache.append('自定义')
         name_list=tuple(cache)
         return name_list
+
+    def analysis_step(self):
+        '''
+        p=eval(self.ety1.get())
+        p_up=eval(self.ety2.get())
+        ups=eval(self.ety3.get())
+        thres=eval(self.ety4.get())
+        most=eval(self.ety5.get())
+        mg=eval(self.ety6.get())
+        
+        if ups==1:
+            e_list=[[1],[2],[3]]
+        elif ups>=2:
+            e_list=[[1 for _ in range(ups)]]
+            showinfo('Info','多up池分析曲线功能尚未开放完毕，请等待后续版本更新！')
+            return None
+
+        for e in e_list:
+            para_set=step(p,p_up,ups,thres,most,mg)
+            up_result[tuple([tuple(e),0])]=0
+            n=0
+            upper=sum(e)*int((most if most>1 else thres+round((1-p)/most))/p_up)
+            while n<upper:
+                n+=1
+                para_set.calc(n,e)
+            x_list=[]
+            y_list=[]
+            for i in sorted([_[1] for _ in up_result.keys()]):
+                x_list.append(i)
+                y_list.append(up_result[tuple([tuple(e),i])])
+            
+            plt.plot(x_list,y_list,label=','.join([str(_) for _ in e]))
+
+        plt.rcParams['font.sans-serif']=['SimHei']
+        plt.rcParams['axes.unicode_minus']=False
+        plt.xlabel('抽数')
+        plt.ylabel('达成期望概率')
+        plt.title('抽卡概率曲线')
+        plt.legend()
+        plt.show()
+        '''
+        try:
+            p=eval(self.ety1.get())
+            p_up=eval(self.ety2.get())
+            ups=eval(self.ety3.get())
+            thres=eval(self.ety4.get())
+            most=eval(self.ety5.get())
+            mg=eval(self.ety6.get())
+            
+            if ups==1:
+                e_list=[[1],[2],[3]]
+            elif ups>=2:
+                e_list=[[1 for _ in range(ups)]]
+                showinfo('Info','多up池分析曲线功能尚未开发完毕，请等待后续版本更新！')
+                return None
+
+            for e in e_list:
+                para_set=step(p,p_up,ups,thres,most,mg)
+                up_result[tuple([tuple(e),0])]=0
+                n=0
+                upper=sum(e)*int((most if most>1 else thres+round((1-p)/most))/p_up)
+                while n<upper:
+                    n+=1
+                    para_set.calc(n,e)
+                x_list=[]
+                y_list=[]
+                for i in sorted([_[1] for _ in up_result.keys()]):
+                    x_list.append(i)
+                    y_list.append(up_result[tuple([tuple(e),i])])
+                
+                plt.plot(x_list,y_list,label=','.join([str(_) for _ in e]))
+
+            plt.rcParams['font.sans-serif']=['SimHei']
+            plt.rcParams['axes.unicode_minus']=False
+            plt.xlabel('抽数')
+            plt.ylabel('达成期望概率')
+            plt.title('抽卡概率曲线')
+            plt.legend()
+            plt.show()
+            
+        except SyntaxError:
+            showerror('Error','存在参数值为空！')
+        except TypeError:
+            showerror('Error','期望结果输入格式错误！')
+        except:
+            showerror('Error','未知错误！')
 
     def createWidgets_fixed(self):
         for widget in self.master.winfo_children():
@@ -438,9 +489,9 @@ class Ui(Frame):
         self.ety2.config(state='normal')
         self.ety3.config(state='normal')
 
-        self.ety1.delete(0,END)
-        self.ety2.delete(0,END)
-        self.ety3.delete(0,END)
+        for widget in self.master.winfo_children():
+            if widget.winfo_class()=='Entry':
+                widget.delete(0,END)
 
         m=mode.get()
         if m in fixed_model.keys():
@@ -457,32 +508,34 @@ class Ui(Frame):
     def check_fixed(self,event):
         if self.ety1.get():
             try:
-                if eval(self.ety1.get())>1:
-                    showwarning('Warning','请输入0-1之间的数')
+                if not check_input(self.ety1.get(),'p'):
                     self.ety1.delete(0,END)
             except:
-                showwarning('Warning','数据类型错误！请输入0-1之间的数')
                 self.ety1.delete(len(self.ety1.get())-1,END)
         if self.ety2.get():
             try:
-                if eval(self.ety2.get())>1:
-                    showwarning('Warning','请输入0-1之间的数')
+                if not check_input(self.ety2.get(),'p'):
                     self.ety2.delete(0,END)
             except:
-                showwarning('Warning','数据类型错误！请输入0-1之间的数')
                 self.ety2.delete(len(self.ety2.get())-1,END)
         if self.ety3.get():
-            if not self.ety3.get()[-1].isnumeric():
-                showwarning('Warning','请输入整数！')
+            try:
+                if not check_input(self.ety3.get(),'N'):
+                    self.ety3.delete(len(self.ety3.get())-1,END)
+            except:
                 self.ety3.delete(len(self.ety3.get())-1,END)
         if self.ety4.get():
-            if not self.ety4.get()[-1].isnumeric():
-                showwarning('Warning','请输入整数！')
-                self.ety4.delete(len(self.ety3.get())-1,END)
+            try:
+                if not check_input(self.ety4.get(),'N'):
+                    self.ety4.delete(len(self.ety4.get())-1,END)
+            except:
+                self.ety4.delete(len(self.ety4.get())-1,END)
         if self.ety5.get():
-            if not self.ety5.get()[-1].isnumeric():
-                showwarning('Warning','请输入整数！')
-                self.ety5.delete(len(self.ety3.get())-1,END)
+            try:
+                if not check_input(self.ety5.get(),'N'):
+                    self.ety5.delete(len(self.ety5.get())-1,END)
+            except:
+                self.ety5.delete(len(self.ety5.get())-1,END)
 
     def fixed_output(self):
         try:
@@ -744,6 +797,73 @@ def input2nlist(text):
             return None
     return list
 
+def check_input(text,require='',r=False):                       #酒馆防爆机制（输入合法性检查）
+    '''
+    require参数设置: 'N':自然数, 'p':0-1, 'P':0-1/0-100%, 'f':任意数字
+    r: 是否返回值
+    '''
+    if require:
+        if require=='N':
+            try:
+                if (eval(text)==int(eval(text))) and (eval(text)>=0):
+                    if r:
+                        return eval(text)
+                    else:
+                        return True
+                else:
+                    if r:
+                        print('请输入自然数！')
+                        return check_input(text,require)
+                    else:
+                        showwarning('Warning','请输入自然数')
+                        return False
+            except:
+                if r:
+                    print('数据格式错误！请输入自然数')
+                    return check_input(text,require)
+                else:
+                    showerror('Error','数据类型错误！请输入自然数')
+                    raise TypeError
+        if require=='p':
+            try:
+                if 0<=eval(text)<=1:
+                    if r:
+                        return eval(text)
+                    else:
+                        return True
+                else:
+                    if r:
+                        print('请输入0-1之间的数！')
+                        return check_input(text,require)
+                    else:
+                        showwarning('Warning','请输入0-1之间的数！')
+                        return False
+            except:
+                if r:
+                    print('数据格式错误！请输入0-1之间的数')
+                    return check_input(text,require)
+                else:
+                    showerror('Error','数据类型错误！请输入0-1之间的数')
+                    raise TypeError
+        if require=='f':
+            try:
+                if r:
+                    return eval(text)
+                else:
+                    eval(text)
+                    return True
+            except:
+                showerror('Error','数据类型错误！请输入数字')
+                raise TypeError
+    else:
+        if r:
+            try:
+                return eval(text)
+            except:
+                return text
+        else:
+            return True
+
 def prob_ys(n):
     if n<=73:
         return 0.006
@@ -756,7 +876,7 @@ def prob_mrfz(n):
     else:
         return 0.02*n-0.98                          #0.02*(n-50)+0.02
 
-class step(Ui):
+class step():
     def __init__(self,p,p_up,ups,thres,most,mg,*args,**kwargs):
         '''
         p:最高稀有度出率
@@ -786,10 +906,11 @@ class step(Ui):
         else:
             return self.p+(n-self.thres)*self.most if self.p+(n-self.thres)*self.most<1 else 1
 
-    def smlt(self,n,e,detail=False,times=100000):
+    def smlt(self,n,e,t=0,detail=False,times=100000):
         '''
         n为总抽数
         e为期望抽卡结果（数组形式表示）
+        t为未出最高稀有度角色抽数
         times为重复模拟次数
         '''
         #start=time.time()
@@ -797,7 +918,7 @@ class step(Ui):
         up=dict()
         for i in range(times):                                  #新狗哥入场
             insur=0                                             #非酋计数器（大保底计数器）
-            turn=0                                              #小保底计数器
+            turn=t                                              #小保底计数器
             s=0
             count=[0 for i in range(self.ups)]                  #up计数器
             for j in range(n):
@@ -841,9 +962,11 @@ class step(Ui):
         
         return eval('%.4f'%(result/times))
 
-    def interplt(self,e,target=0.95,lower=0,upper=None):
+    def clmp_n(self,e,target=0.95,lower=0,upper=None,fd=None):
         if upper==None:
-            upper=sum(e)*int((self.most if self.most>1 else self.thres+round((1-p)/self.most))/self.p_up)
+            upper=sum(e)*int((self.most if self.most>1 else self.thres+round((1-self.p)/self.most))/self.p_up)
+        if fd==None:
+            fd=upper-lower
         n=int(lower+(upper-lower)*(target+0.5)/2)
         p1=self.calc(n,e)
         p2=self.calc(n+1,e)
@@ -851,16 +974,16 @@ class step(Ui):
         if p1<=target<p2:
             return n+1
         elif p2<target:
-            return self.interplt(e,target,n,upper,fd)
+            return self.clmp_n(e,target,n,upper,fd)
         else:
-            return self.interplt(e,target,lower,n,fd)
+            return self.clmp_n(e,target,lower,n,fd)
 
-    def calc(self,n,e,rel_exp=6):
+    def calc(self,n,e,t=0,rel_exp=6):
         global up
         global up_result
         
         if up==None:
-            up=[[tuple([0 for i in range(len(e))]),0,0,0,1]]
+            up=[[tuple([0 for i in range(len(e))]),0,t,0,1]]
         '''
         up[0]: up结果
         up[1]: 总抽数
@@ -870,7 +993,7 @@ class step(Ui):
         '''
         #start=time.time()
 
-        if self.mg and (n>=(self.mg+1)*(self.most if self.most>1 else self.thres+round((1-p)/self.most))*sum(e)):
+        if self.mg and (n>=(self.mg+1)*(self.most if self.most>1 else self.thres+round((1-self.p)/self.most))*sum(e)):
             return 1
         else:
             if tuple([tuple(e),n]) in up_result:
@@ -878,7 +1001,7 @@ class step(Ui):
             
             cache_dict=dict()
             result=0
-            max_p=0
+            max_p=0                                     #判断rel_exp的小概率事件
             
             if len(up)==1:
                 i=0
@@ -1127,39 +1250,6 @@ def ct(text,Default=True):
         return False
     else:
         ct(text,Default)
-
-def check_input(text,require=''):                       #酒馆防爆机制（输入合法性检查）
-    '''
-    'N':自然数
-    'p':0-1
-    '''
-    cache=input(text)
-    if require:
-        if require=='N':
-            try:
-                if (eval(cache)==int(eval(cache))) and (eval(cache)>=0):
-                    return eval(cache)
-                else:
-                    print('请输入自然数！')
-                    return check_input(text,require)
-            except:
-                print('数据格式错误！请输入自然数！')
-                return check_input(text,require)
-        if require=='p':
-            try:
-                if 0<=eval(cache)<=1:
-                    return eval(cache)
-                else:
-                    print('请输入0-1之间的数！')
-                    return check_input(text,require)
-            except:
-                print('数据格式错误！请输入0-1之间的数！')
-                return check_input(text,require)
-    else:
-        try:
-            return eval(cache)
-        except:
-            return cache
 
 if __name__=="__main__":
     step_model={'原神':[0.006,0.5,1,73,90,1],
