@@ -208,7 +208,7 @@ class Ui(Frame):
                 n=int(lower+(upper-lower)*(target+0.5)/2)
                 p1=para_set.calc(n,e) if ups==1 else para_set.smlt(n,e)
                 p2=para_set.calc(n+1,e) if ups==1 else para_set.smlt(n+1,e)
-                print(lower,upper,n,p1,p2)
+                #print(lower,upper,n,p1,p2)
                 if p1<target<=p2:
                     nx=n+1
                     break
@@ -419,15 +419,13 @@ class Ui(Frame):
                 up_result[tuple([tuple(e),0])]=0
                 para_set=step(p,p_up,ups,thres,most,mg,up_result=up_result)
                 n=0
-                upper=sum(e)*int((most if most>1 else thres+round((1-p)/most))/p_up)*ups
+                upper=sum(e)*int((most if most>1 else thres+round((1-p)/most))/p_up)*(1+ups)/2
                 while n<upper:
                     n+=1
                     if ups==1:
                         para_set.calc(n,e)
                     else:
                         para_set.smlt(n,e)
-                    if up_result[tuple([tuple(e),n])]>0.999:
-                        break
                 x_list=[]
                 y_list=[]
                 for i in sorted([_[1] for _ in up_result.keys()]):
@@ -436,8 +434,8 @@ class Ui(Frame):
                 
                 plt.plot(x_list,y_list,label=','.join([str(_) for _ in e]))
 
+            plt.legend()
             cv.draw()
-            #plt.legend()
             #plt.show()
             
         except SyntaxError:
