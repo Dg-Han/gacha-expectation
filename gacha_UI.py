@@ -1,11 +1,13 @@
 import random
 import traceback
+import threading
 
 from tkinter import *
 from tkinter import ttk
 from tkinter.messagebox import showwarning, showerror, showinfo
 
 import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
@@ -65,7 +67,7 @@ class Ui(Frame):
             self.info.title('有关信息')
             self.info.geometry('320x240')
             self.info.lb1=Label(self.info,text='抽卡期望计算器')
-            self.info.lb2=Label(self.info,text='当前版本: 1.1.1 (ver20220602)')
+            self.info.lb2=Label(self.info,text='当前版本: 1.1.2 (ver20220712)')
             self.info.lb3=Label(self.info,text='Copyright by Dg_Han. All Rights Reserved.')
             self.info.lb4=Label(self.info,text='github: https://github.com/Dg-Han')
             self.info.lb1.pack()
@@ -86,12 +88,12 @@ class Ui(Frame):
         self.cmb.place(relx=0.7,rely=0.1,relwidth=0.1,relheight=0.05)
         self.cmb.set('')
 
-        label_list=['最高稀有度出率','up占最高稀有度比例','up角色数量','触发概率递增机制抽数','必出抽数/每抽递增概率','大保底歪几必出\n0为无大保底机制',
+        label_list=['最高稀有度出率','up占最高稀有度总比例','up角色数量','触发概率递增机制抽数','递增至必出时抽数\n或 每抽递增概率','大保底歪几必出\n或 兑换up所需抽数\n0为无大保底机制',
                     '总抽数','期望结果\n多up角色数量间用逗号分隔','未出最高稀有度角色抽数\n默认为0','期望结果概率\n默认为95%']
 
         for i in range(6):
             self.lb=Label(self.master,text=label_list[i],font=self.label_font)
-            self.lb.place(relx=0.15*i+0.025,rely=0.275,relwidth=0.15,relheight=0.05)
+            self.lb.place(relx=0.15*i+0.025,rely=0.25,relwidth=0.15,relheight=0.1)
 
         self.ety1=Entry(self.master)
         self.ety2=Entry(self.master)
@@ -129,13 +131,13 @@ class Ui(Frame):
         self.ety9.bind('<KeyRelease>',self.check_step)
         self.ety10.bind('<FocusOut>',self.check_step)
 
-        self.btn1=Button(self.master,text='计算',font='Times\sNew\sRoman -20',command=lambda: self.step_output())
+        self.btn1=Button(self.master,text='计算',font='Times\sNew\sRoman -20',command=lambda: threading.Thread(target=self.step_output,args=()).start())
         self.btn1.place(relx=0.7,rely=0.5,relwidth=0.2,relheight=0.1)
         self.btn2=Button(self.master,text='保存模板',command=lambda: self.save_step_model())
         self.btn2.place(relx=0.85,rely=0.025,relwidth=0.1,relheight=0.05)
         self.btn3=Button(self.master,text='删除模板',command=lambda: self.delete_step_model())
         self.btn3.place(relx=0.85,rely=0.1,relwidth=0.1,relheight=0.05)
-        self.btn4=Button(self.master,text='分析卡池曲线',command=lambda: self.analysis_set())
+        self.btn4=Button(self.master,text='分析卡池曲线',command=lambda: threading.Thread(target=self.analysis_set,args=()).start())
         self.btn4.place(relx=0.85,rely=0.175,relwidth=0.1,relheight=0.05)
 
         self.lb11=Label(self.master,text='',font='Times\sNew\sRoman -18')
@@ -197,6 +199,7 @@ class Ui(Frame):
                 target=0.95
             
             para_set=step(p,p_up,ups,thres,most,mg)
+            self.lb11.config(text='计算中...')
             result=para_set.calc(n,e,t) if ups==1 else para_set.smlt(n,e,t)
             self.lb11.config(text='计算中... 计算进度 %.2f %%'%(10+10*random.random()))
             self.update()
@@ -224,10 +227,13 @@ class Ui(Frame):
             self.lb11.config(text='达到预期抽卡结果的概率是 %.2f %%\n%s\n达到 %d%% 出率的所需抽数为 %d'%(100*result,p_return(result),int(100*target),nx))
             
         except SyntaxError:
+            self.lb11.config(text='')
             showerror('Error','存在参数值为空！')
         except TypeError:
+            self.lb11.config(text='')
             showerror('Error','期望结果输入格式错误！')
         except Exception as e:
+            self.lb11.config(text='')
             traceback.print_exc()
             showerror('Error','未知错误！')
 
@@ -346,6 +352,10 @@ class Ui(Frame):
         return name_list
 
     def analysis_set(self):
+        if not self.ety3.get():
+            showwarning('Warning','请先设定卡池参数！')
+            return
+        
         self.top=Toplevel()
         self.top.title('卡池分析设置')
         self.top.geometry('960x640')
@@ -370,7 +380,7 @@ class Ui(Frame):
         self.top.txt=Text(self.top)
         self.top.txt.place(relx=0.85,rely=0.5,relwidth=0.1,relheight=0.3)
 
-        self.top.btn=Button(self.top,text='分析',command=lambda: self.analysis_step(self.get_e_list()))
+        self.top.btn=Button(self.top,text='分析',command=lambda: threading.Thread(target=self.analysis_step,args=(self.get_e_list(),)).start())
         self.top.btn.place(relx=0.85,rely=0.85,relwidth=0.1,relheight=0.05)
 
     def get_e_list(self):
@@ -413,26 +423,31 @@ class Ui(Frame):
             plt.xlabel('抽数')
             plt.ylabel('达成期望概率')
             plt.title('抽卡概率曲线')
-
+            
             for e in e_list:
                 up_result=dict()
-                up_result[tuple([tuple(e),0])]=0
                 para_set=step(p,p_up,ups,thres,most,mg,up_result=up_result)
                 n=0
-                upper=sum(e)*int((most if most>1 else thres+round((1-p)/most))/p_up)*(1+ups)/2
+                if para_set.mg_type=='exc':
+                    upper=mg*max(e)*1.05
+                else:
+                    upper=sum(e)*int((most if most>1 else thres+round((1-p)/most))/p_up)*(1+ups)/2
                 while n<upper:
                     n+=1
                     if ups==1:
                         para_set.calc(n,e)
+                        self.update()
                     else:
                         para_set.smlt(n,e)
+                        self.update()
+                up_result[tuple([tuple(e),0])]=0
                 x_list=[]
                 y_list=[]
                 for i in sorted([_[1] for _ in up_result.keys()]):
                     x_list.append(i)
                     y_list.append(up_result[tuple([tuple(e),i])])
                 
-                plt.plot(x_list,y_list,label=','.join([str(_) for _ in e]))
+                plt.plot(x_list,y_list,label=','.join([str(e[_])+'up'+('' if len(e)==1 else chr(ord('A')+_)) for _ in range(len(e))]))
 
             plt.legend()
             cv.draw()
@@ -645,7 +660,7 @@ class Ui(Frame):
         self.lb8=Label(self.master,text='',font='Times\sNew\sRoman -18')
         self.lb8.place(relx=0.25,rely=0.75,relwidth=0.5,relheight=0.1)
 
-        self.btn1=Button(self.master,text='计算',command=lambda: self.collection_output(),font='Times\sNew\sRoman -20')
+        self.btn1=Button(self.master,text='计算',font='Times\sNew\sRoman -20',command=lambda: threading.Theard(target=self.collection_output,args=()).start())
         self.btn1.place(relx=0.7,rely=0.5,relwidth=0.2,relheight=0.1)
         self.btn2=Button(self.master,text='添加收藏品属性',command=lambda: self.collect_collection())
         self.btn2.place(relx=0.8,rely=0.1,relwidth=0.1,relheight=0.05)
