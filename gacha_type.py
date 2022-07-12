@@ -4,22 +4,32 @@ import time
 
 from tkinter.messagebox import showwarning
 
+from gacha_func import judge_exp
+
 class step():
     def __init__(self,p,p_up,ups,thres,most,mg,*args,**kwargs):
         '''
         p:最高稀有度出率
         p_up:up占最高稀有度比例
         ups:up角色数量
-        thres:触发保底机制下限
+        thres:触发保底机制下限, 0为无概率递增机制(计划与fixed合并)
         most:必出抽数/触发保底机制后每抽递增概率
-        mg:大保底歪几必出 (minimum guarantee); 0为无大保底机制
+        mg:大保底歪几必出 (minimum guarantee)
+           或 可以兑换up的抽数; 0为无大保底机制
         '''
         step.p=p
         step.p_up=p_up
         step.ups=ups
         step.thres=thres
-        step.mg=mg
         step.most=most
+        step.mg=mg
+
+        if self.mg==0:
+            self.mg_type="None"
+        elif 0<self.mg<(self.most if self.most>1 else int(self.thres+(1-self.p)/self.most)):
+            self.mg_type="mg"
+        else:
+            self.mg_type="exc"
         
         self.up=None
         self.up_result=dict()
@@ -27,8 +37,8 @@ class step():
         for key in kwargs:
             setattr(self,key,kwargs[key])
 
-    def prob(self,n: int) -> float:
-        if n<self.thres:
+    def prob(self,n:int) -> float:
+        if (self.thres==0) or (n<self.thres):
             return self.p
         elif self.most>1:
             return (1-self.p)*(n-self.thres)/(self.most-self.thres)+self.p
@@ -72,7 +82,7 @@ class step():
                             self.up[j][2], self.up[j][3]=0,0
                             mg_b=False
                             break
-                    if self.mg and mg_b:
+                    if self.mg_type=="mg" and mg_b:
                         if self.up[j][3]==self.mg:                  #非酋的强运！（大保底）
                             for k in range(self.ups):
                                 if (k+(self.ups-k)*self.p_up)<=cache*self.ups/pt<(k+1+(self.ups-k-1)*self.p_up):
@@ -98,6 +108,16 @@ class step():
             
             if len(self.up)==0:
                 break
+
+        if self.mg_type=="exc" and self.up:
+            j=0
+            t=n//self.mg
+            if t:
+                while j<len(self.up):
+                    if judge_exp(self.up[j][0],e,t):
+                        del self.up[j]
+                    else:
+                        j+=1
 
         return eval('%.4f'%(1-len(self.up)/times))
         '''
@@ -173,7 +193,9 @@ class step():
         '''
         rel_exp: 小于最大概率分支的10*(-exp)的分支将不再计算
         '''
-        if self.up==None:
+        #start=time.time()
+        
+        if self.up==None and (not self.up_result.keys()):
             self.up=[[tuple([0 for i in range(len(e))]),0,t,0,1]]
         '''
         up[0]: up结果
@@ -182,33 +204,27 @@ class step():
         up[3]: 保底结果
         up[4]: 概率
         '''
-        #start=time.time()
 
-        if self.mg and (n>=(self.mg+1)*(self.most if self.most>1 else self.thres+round((1-self.p)/self.most))*sum(e)):
+        if (self.mg_type=="mg" and (n>=(self.mg+1)*(self.most if self.most>1 else self.thres+round((1-self.p)/self.most))*sum(e)))\
+           or (self.mg_type=="exc" and n>=self.mg*sum(e)):
             return 1
+        elif tuple([tuple(e),n]) in self.up_result:     #已有计算结果
+            return self.up_result[tuple([tuple(e),n])]
+        elif not self.up:                               #所有剩余分支均为小概率事件或不可能事件
+            return self.up_result.get(tuple([tuple(e),n]),1)
         else:
-            if tuple([tuple(e),n]) in self.up_result:
-                return self.up_result[tuple([tuple(e),n])]
-            
             cache_dict=dict()
             result=0
             max_p=0                                     #判断rel_exp的小概率事件
             
-            if len(self.up)==1:
-                i=0
-            else:
-                i=len(self.up)-1
-                while self.up[i][1]==self.up[i-1][1]:
-                    i-=1
-                    if i==0:
-                        break
-                result=self.up_result.get(tuple([tuple(e),self.up[i][1]]),0)
-                    
+            i=0
+            result=self.up_result.get(tuple([tuple(e),self.up[0][1]]),0)
+            
             while self.up[i][1]<=n-1:
                 #未抽中最高稀有度
                 cache_dict[tuple([self.up[i][0],self.up[i][1]+1,self.up[i][2]+1,self.up[i][3]])]=cache_dict.get(tuple([self.up[i][0],self.up[i][1]+1,self.up[i][2]+1,self.up[i][3]]),0)+self.up[i][4]*(1-self.prob(self.up[i][2]+1))
                 #大保底
-                if self.mg and (self.up[i][3]==self.mg): 
+                if self.mg_type=="mg" and (self.up[i][3]==self.mg): 
                     for j in range(len(e)):
                         cache=[]
                         #判断大保底角色
@@ -247,28 +263,40 @@ class step():
                             cache_dict[tuple([tuple(cache),self.up[i][1]+1,0,0])]=cache_dict.get(tuple([tuple(cache),self.up[i][1]+1,0,0]),0)+self.up[i][4]*self.prob(self.up[i][2]+1)*self.p_up/self.ups
                 
                 if (i+1==len(self.up)):
+                    next_up=[]
                     for key in cache_dict.keys():
+                        #print(key,cache_dict[key])
                         if rel_exp:
                             if cache_dict[key]>max_p*10**(-rel_exp):
                                 cache=list(key)
                                 cache.append(cache_dict[key])
-                                self.up.append(cache)
+                                next_up.append(cache)
                         else:
                             if cache_dict[key]:
                                 cache=list(key)
                                 cache.append(cache_dict[key])
-                                self.up.append(cache)
+                                next_up.append(cache)
                     self.up_result[tuple([tuple(e),self.up[i][1]+1])]=result
+                    self.up=next_up
+                    i=-1
                     cache_dict=dict()
+
                 i+=1
 
-                if i>=len(self.up):
+                if not self.up:
                     break
 
-            #end=time.time()
-            #print('Calc %d: Running time: %s seconds.'%(n,end-start))
+        if self.up and self.mg_type=="exc":
+            t=n//self.mg
+            if t:
+                for case in self.up:
+                    if judge_exp(case[0],e,t):
+                        result-=case[4]
+
+        #end=time.time()
+        #print('Calc %d: Running time: %s seconds.'%(n,end-start))
                 
-            return eval('%.4f'%result)
+        return eval('%.4f'%result)
 
     def output_list(self):
         for i in sorted(self.up.keys()):
@@ -313,12 +341,6 @@ class fixed():
             for i in range(e-math.floor(n/self.most)):
                 p-=((1-self.p_up)**(n-i))*(self.p_up**i)*math.comb(n,i)
             return p
-
-def judge_exp(key,e):
-    for i in range(len(key)):
-        if key[i]<e[i]:
-            return False
-    return True
 
 class collection():
     def __init__(self,num,p=None,cost=None,value=None,*args,**kwargs):
