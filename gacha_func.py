@@ -1,6 +1,14 @@
+import random
 import traceback
 
 from tkinter.messagebox import showerror, showwarning
+
+def judge_exp(key,e,exc=0):
+    c=[e[_]-key[_] if e[_]>key[_] else 0 for _ in range(len(e))]
+    if sum(c)<=exc:
+        return True
+    else:
+        return False
 
 def input2nlist(text:str) -> list:
     cache=text.split(',')
@@ -83,14 +91,20 @@ def check_input(text:str,require:str='',r:bool=False):                   #酒馆
 
 def p_return(p:float) -> str:
     if p<.05:
-        return "抽数不是问题，能不能成为海豹才是问题"
+        return random.choice(["抽数不是问题，能不能成为海豹才是问题",
+                              "没有机会可以创造机会"])
     elif p<.25:
-        return "小抽怡情，强抽吃土"
+        return random.choice(["小抽怡情，强抽吃土",
+                              "概率范围是0到1，但结果只有0或1"])
     elif p<.5:
-        return "出货的为什么不能是我呢"
+        return random.choice(["出货的为什么不能是我呢",
+                              "人一定要有梦想"])
     elif p<.75:
-        return "概率过半了好诶"
+        return random.choice(["概率过半了好诶",
+                              "你觉得我有机会吗"])
     elif p<.95:
-        return "已经能看到老婆（划掉）了"
+        return random.choice(["已经能看到老婆（划掉）了",
+                              "有经验的抽卡者要勇于下判断"])
     else:
-        return "这还能沉了不成"
+        return random.choice(["这还能沉了不成",
+                              "不需要的抽卡资源可以给有需要的人"])
