@@ -4,10 +4,20 @@
 
 ## version 1.2
 
-### ver 1.2.0a1
+### ver 1.2.0
+Update:
+* 使用`numpy`库加速运算，计算性能单up池提升约10倍，多up池提升约2倍. 现ui已全面转为使用`calc_numpy`与`calc_numpy_ups`接口， `calc`将在下个版本废弃.
 
+To do:
+* 更新计划每次运算时运行一次模拟抽卡，~增加随机性与趣味性~，并提升反馈文案多样性
+
+### ver 1.2.0a1
+<details>
+  <summary>Pre-Release</summary>
+  
 Update:
 * 使用`numpy`库加速运算，现仅支持对单up池的运算，因此暂未合并至主体程序，如有需要可通过调用命令行提前体验. `calc_numpy`将在兼容多up池后正式上线.
+</details>
 
 ## version 1.1
 
