@@ -67,7 +67,7 @@ class Ui(Frame):
             self.info.title('有关信息')
             self.info.geometry('320x240')
             self.info.lb1=Label(self.info,text='抽卡期望计算器')
-            self.info.lb2=Label(self.info,text='当前版本: 1.1.2 (ver20220712)')
+            self.info.lb2=Label(self.info,text='当前版本: 1.2.0 (ver20230608)')
             self.info.lb3=Label(self.info,text='Copyright by Dg_Han. All Rights Reserved.')
             self.info.lb4=Label(self.info,text='github: https://github.com/Dg-Han')
             self.info.lb1.pack()
@@ -200,7 +200,7 @@ class Ui(Frame):
             
             para_set=step(p,p_up,ups,thres,most,mg)
             self.lb11.config(text='计算中...')
-            result=para_set.calc(n,e,t) if ups==1 else para_set.smlt(n,e,t)
+            result=para_set.calc_numpy(n,*e,t) if ups==1 else para_set.calc_numpy_ups(n,e,t)
             self.lb11.config(text='计算中... 计算进度 %.2f %%'%(10+10*random.random()))
             self.update()
             #nx=step(p,p_up,ups,thres,most,mg).clmp_n(e,target)
@@ -209,8 +209,8 @@ class Ui(Frame):
             fdis=upper-lower
             while True:
                 n=int(lower+(upper-lower)*(target+0.5)/2)
-                p1=para_set.calc(n,e) if ups==1 else para_set.smlt(n,e)
-                p2=para_set.calc(n+1,e) if ups==1 else para_set.smlt(n+1,e)
+                p1=para_set.calc_numpy(n,*e) if ups==1 else para_set.calc_numpy_ups(n,e)
+                p2=para_set.calc_numpy(n+1,*e) if ups==1 else para_set.calc_numpy_ups(n+1,e)
                 #print(lower,upper,n,p1,p2)
                 if p1<target<=p2:
                     nx=n+1
