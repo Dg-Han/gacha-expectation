@@ -2,6 +2,7 @@ import math
 import random
 import time
 import numpy
+import itertools
 
 from tkinter.messagebox import showwarning
 from typing import Optional, Callable
@@ -63,6 +64,8 @@ class step():
         
         self.up=None
         self.up_result=dict()
+        self.result = {}
+        self.p_list = {}
 
         for key in kwargs:
             setattr(self,key,kwargs[key])
@@ -84,7 +87,7 @@ class step():
         else:
             return self.p+(n-self.thres)*self.most if self.p+(n-self.thres)*self.most<1 else 1
 
-    @running_time
+    #@running_time
     def smlt(self,n:int,e:list,t:int=0,detail:bool=False,times:int=100000) -> float:
         '''
         模拟抽卡
@@ -229,38 +232,98 @@ class step():
         else:
             return self.clmp_n(e,target,lower,n,fdis)
 
-    @running_time
+    #@running_time
     def calc_numpy(self, n:int, e:int, t:int=0):
         """
-        目前仅限单up
+        仅限单up
         """
-        upper = self.most if self.most else n
+        upper = (self.most if self.most>1 else self.thres+round((1-self.p)/self.most)) if self.most else n
         insur = self.mg if self.mg else n
+
+        if e in self.result.keys():
+            if n<len(self.p_list[e]):
+                return sum(self.p_list[e][:n+1])
+            else:
+                start = len(self.p_list[e])
+                cache = self.result[e]
+                self.result[e] = numpy.zeros((n+1, e+1, insur+1, upper+1))
+                self.result[e][*[slice(_) for _ in cache.shape]] = cache
+                self.p_list[e].extend([0 for _ in range(n+1-start)])
+        else:
+            self.result[e] = numpy.zeros((n+1, e+1, insur+1, upper+1))
+            self.result[e][0,0,0,t] = 1
+            self.p_list[e] = [0 for _ in range(n+1)]
+            start = 1
+
         self.p1 = numpy.asarray([self.prob(_) for _ in range(1, upper+1)]).reshape(upper,1)
         self.p0 = numpy.asarray([1-self.prob(_) for _ in range(1, upper+1)])
-        self.p_list = [0 for _ in range(n+1)]
-
-        self.result = numpy.zeros((n+1, e+1, insur+1, upper+1))
-        self.result[0,0,0,0] = 1
-        for i in range(1, n+1):
-            for j in range(e):
-                for k in range(insur+1):
-                    rarest_p = numpy.dot(numpy.asarray([self.result[i-1,j,k,_] for _ in range(upper)]).reshape(1,upper), self.p1)
-                    
-                    self.result[i,j+1,0,0] += self.p_up[-1] * rarest_p / self.p
-                    if k<insur:
-                        self.result[i,j,k+1,0] += (1 - self.p_up[-1] / self.p) * rarest_p
-                    else:
-                        self.result[i,j+1,0,0] += (1 - self.p_up[-1] / self.p) * rarest_p
-            
-            for j in range(e):
-                for k in range(insur+1):
-                    self.result[i,j,k,1:] += self.p0 * self.result[i-1,j,k,:-1]
-            self.p_list[i] = sum([self.result[i,e,_,0] for _ in range(2)])
         
-        return sum(self.p_list)
+        for i in range(start, n+1):
+            for j in range(e):
+                for k in range(insur+1):
+                    rarest_p = numpy.dot(numpy.asarray([self.result[e][i-1,j,k,_] for _ in range(upper)]).reshape(1,upper), self.p1)
+                    
+                    self.result[e][i,j+1,0,0] += self.p_up[-1] * rarest_p / self.p
+                    if k<insur:
+                        self.result[e][i,j,k+1,0] += (1 - self.p_up[-1] / self.p) * rarest_p
+                    else:
+                        self.result[e][i,j+1,0,0] += (1 - self.p_up[-1] / self.p) * rarest_p
+                    
+                    self.result[e][i,j,k,1:] += self.p0 * self.result[e][i-1,j,k,:-1]
+            self.p_list[e][i] = sum([self.result[e][i,e,_,0] for _ in range(2)])
+        
+        return sum(self.p_list[e])
     
-    @running_time
+    #@running_time
+    def calc_numpy_ups(self, n:int, e:list, wish:Optional[int]= None, t:int= 0):
+        """
+        多up版本
+        """
+        upper = (self.most if self.most>1 else self.thres+round((1-self.p)/self.most)) if self.most else n
+        insur = self.mg if self.mg else n
+
+        if tuple(e) in self.result.keys():
+            if n<len(self.p_list[tuple(e)]):
+                return sum(self.p_list[tuple(e)][:n+1])
+            else:
+                start = len(self.p_list[tuple(e)])
+                cache = self.result[tuple(e)]
+                self.result[tuple(e)] = numpy.zeros((n+1, *[_+1 for _ in e], insur+1, upper+1))
+                self.result[tuple(e)][*[slice(_) for _ in cache.shape]] = cache
+                self.p_list[tuple(e)].extend([0 for _ in range(n+1-start)])
+        else:
+            self.result[tuple(e)] = numpy.zeros((n+1, *[_+1 for _ in e], insur+1, upper+1))
+            self.result[tuple(e)][0,*[0 for _ in range(len(e))],0,t] = 1
+            self.p_list[tuple(e)] = [0 for _ in range(n+1)]
+            start = 1
+
+        self.p1 = numpy.asarray([self.prob(_) for _ in range(1, upper+1)]).reshape(upper,1)
+        self.p0 = numpy.asarray([1-self.prob(_) for _ in range(1, upper+1)])
+
+        for i in range(start, n+1):
+            for j in itertools.product(*[range(_+1) for _ in e]):
+                if not judge_exp(j,e):
+                    for k in range(insur+1):
+                        rarest_p = numpy.dot(numpy.asarray([self.result[tuple(e)][i-1,*j,k,_] for _ in range(upper)]).reshape(1,upper), self.p1)
+                        
+                        for n in range(len(e)):
+                            self.result[tuple(e)][i,*[((j[_]+1) if ((_==n) and (j[_]<e[_])) else j[_]) for _ in range(len(e))],0,0] += (self.p_up[n] - (self.p_up[n-1] if n else 0)) * rarest_p / self.p
+                        if k<insur:
+                            self.result[tuple(e)][i,*j,k+1,0] += (1 - self.p_up[-1] / self.p) * rarest_p
+                        else:
+                            if wish:
+                                self.result[tuple(e)][i,*[((j[_]+1) if ((wish==_+1) and (j[_]<e[_])) else j[_]) for _ in range(len(e))],0,0] += (1 - self.p_up[-1] / self.p) * rarest_p
+                            else:
+                                for n in range(len(e)):
+                                    self.result[tuple(e)][i,*[(j[_]+1) if ((_==n) and (j[_]<e[_])) else j[_] for _ in range(len(e))],0,0] += (1 - self.p_up[-1] / self.p) * rarest_p / len(e)
+
+                        self.result[tuple(e)][i,*j,k,1:] += self.p0 * self.result[tuple(e)][i-1,*j,k,:-1]
+            
+            self.p_list[tuple(e)][i] = sum([self.result[tuple(e)][i,*e,_,0] for _ in range(insur+1)])
+        
+        return sum(self.p_list[tuple(e)])
+    
+    #@running_time
     def calc(self,n:int,e:list,t:int=0,rel_exp:int=6) -> float:
         '''
         rel_exp: 小于最大概率分支的10*(-exp)的分支将不再计算
@@ -470,7 +533,7 @@ class collection():
                     for j in range(self.level[i]):
                         self.value.append(value[i])
 
-    @running_time
+    #@running_time
     def smlt(self,n,res=None,rp=None,times=100000):
         '''
         n: 抽数
@@ -539,5 +602,5 @@ def prob_mrfz(n):
     else:
         return 0.02*n-0.98                          #0.02*(n-50)+0.02
 
-if __name__=='__main__':
+if __name__=='__main__':    
     pass
