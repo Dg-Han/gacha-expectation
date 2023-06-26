@@ -1,33 +1,25 @@
 import math
 import random
-import time
 import numpy
 import itertools
 
 from tkinter.messagebox import showwarning
-from typing import Optional, Callable
+from typing import Optional
 
-from gacha_func import judge_exp
-
-def running_time(func: Callable):
-    def wrapper(*args, **kwargs):
-        print("Running time test\n---")
-        st = time.time()
-        res = func(*args, **kwargs)
-        et = time.time()
-        print(f"{func.__name__} Running time: {et-st} seconds\nWith args: {', '.join([str(_) for _ in args[1:]])}\nWith kwargs: {', '.join([(': '.join(key, str(kwargs[key]))) for key in kwargs])}\nThe result is {res}")
-    return wrapper
+from gacha_func import judge_exp, details_report, running_time
 
 class step():
-    def __init__(self, p:float, p_up: float|list[float], ups: Optional[int], thres:int, most:int, mg:int, mg_type:Optional[str]="default", *args, **kwargs):
+    def __init__(self, p:float, p_up: float|list[float], ups: Optional[int], thres:int=0, most:int=0, mg:int=0, mg_type:Optional[str]="default", *args, **kwargs):
         '''
         Parameters
         ---
         - p:最高稀有度出率
         - p_up:up占最高稀有度比例, 或up出率列表
+            - 最后均为转换为出率列表形式
         - ups:up角色数量, 如果p_up为出率列表则为None
-        - thres:触发保底机制下限, 0为无概率递增机制(计划与fixed合并)
-        - most:必出抽数/触发保底机制后每抽递增概率
+            - None最终将转换为实际up角色数量（即p_up列表长度）
+        - thres:触发保底机制下限, 0为无概率递增机制
+        - most:必出抽数/触发保底机制后每抽递增概率, 当thres为0时most也为0
         - mg:大保底歪几必出 (minimum guarantee)
            或 可以兑换up的抽数; 0为无大保底机制
         - mg_type: 大保底机制, `mg`为歪几必出, `exc`为固定抽数兑换, `None`为无大保底机制,
@@ -40,7 +32,7 @@ class step():
         step.p=p
         if ups == None:
             try:
-                self.p_up = [sum(p_up)[:_+1] for _ in range(len(p_up))]
+                self.p_up = [sum(p_up[:_+1]) for _ in range(len(p_up))]
             except:
                 raise TypeError("Mismatch between p_up and ups: should be float-int or list-None pair")
         else:
@@ -48,10 +40,17 @@ class step():
                 self.p_up = [(_+1)*p*p_up/ups for _ in range(ups)]
             except:
                 raise TypeError("Mismatch between p_up and ups: should be float-int or list-None pair")
-        step.ups=ups
+        step.ups=ups if ups else len(self.p_up)
         step.thres=thres
         step.most=most if step.thres else 0
         step.mg=mg
+        if thres:
+            if most>1:
+                step.t95 = most
+            else:
+                step.t95 = self.thres + round((1-self.p)/self.most)
+        else:
+            step.t95 = int(math.log(0.05, 1-self.p) + 1)
 
         if mg_type not in ['', 'mg', 'exc', 'None', 'default']:
             raise ValueError("mg_type must be null string, mg, exc or None")
@@ -88,7 +87,7 @@ class step():
             return self.p+(n-self.thres)*self.most if self.p+(n-self.thres)*self.most<1 else 1
 
     #@running_time
-    def smlt(self,n:int,e:list,t:int=0,detail:bool=False,times:int=100000) -> float:
+    def smlt(self,n:int,e:Optional[list]=None,t:Optional[int]=0,detail:Optional[bool]=True,times:int=1) -> float|dict:
         '''
         模拟抽卡
 
@@ -97,9 +96,74 @@ class step():
         - n: 总抽数
         - e: 期望抽卡结果（数组形式表示）
         - t: 未出最高稀有度角色抽数
-        - times: 重复模拟次数, 默认为1e5
+        - detail: 是否输出具体模拟结果, 默认为True
+            - 返回值为字典，key值包括由抽到up角色前抽数组成的列表`count`, 以及记录角色信息的`ups_record`, 以及歪的总数`others_rarest`
+        - times: 重复模拟次数, 默认为1，如需通过多次模拟计算概率，请输入较大的times以保证结果准确
+            - 多次模拟由于保留四位小数，推荐为1e5以上，但需注意所需耗时较长
+
+        Returns
+        ---
+        - 达成抽卡期望e的模拟次数占总模拟次数的比例 (detail == False)
+        - 模拟抽卡详情, 以字典形式输出 (detail == True)
+            - 包括以下字段
+                - `raw` 以times个抽出最高稀有度角色以及对应抽数的列表组成的列表
+                - `meta` 卡池元信息
         '''
+
+        up=dict()
+        details = {'raw': [[] for _ in range(times)], 'meta': {'n':n, 'ups': self.ups, 'e':e, "mg": self.mg, "mg_type": self.mg_type}}
         
+        for i in range(times):                                  #新狗哥入场
+            insur=0                                             #非酋计数器（大保底计数器）
+            turn=t                                              #小保底计数器
+            s=0
+            count=[0 for _ in range(self.ups)]                  #up计数器
+            for j in range(n):
+                turn+=1
+                pt=self.prob(turn)
+                cache=random.random()                           #抽卡！
+                if cache<pt:                                    #抽中五星
+                    mg_b=True
+                    for k in range(self.ups):                   #判断是否是第(k+1)个up
+                        if cache < pt*self.p_up[k]/self.p:
+                            count[k]+=1
+                            details['raw'][i].append((j, k))
+                            insur=0
+                            mg_b=False
+                            break
+                    if self.mg and mg_b:
+                        if insur==self.mg:                      #非酋的强运！（大保底）
+                            for k in range(self.ups):
+                                if cache < pt*self.p_up[k]/self.p_up[-1]:
+                                    count[k]+=1
+                                    details['raw'][i].append((j, k))
+                                    break
+                            insur=0                             #大保底重置
+                        else:
+                            insur+=1                            #非酋复活甲（大保底激活）
+                            s+=1                                #歪计数器+1
+                            details['raw'][i].append((j, -1))
+                    turn=0                                      #新轮回开始（保底计数器清零）
+                    
+                    if (not detail) and (sum(count)>=sum(e)):
+                        if judge_exp(count,e):
+                            break
+
+            count=tuple(count)
+            up[count]=up.get(count,0)+1
+
+        if detail:
+            return details
+        else:
+            if e:
+                result=times
+                for key in up.keys():
+                    if not judge_exp(key,e):
+                        result-=up[key]
+                return eval('%.4f'%(result/times))
+            else:
+                raise ValueError('No expectation but frequency needed')
+
         if self.up==None:
             self.up=[[[0 for _ in range(len(e))],0,t,0] for _ in range(times)]
         '''
@@ -109,6 +173,7 @@ class step():
         up[3]: 保底结果
         '''
 
+        '''
         if len(self.up)==0:
             return 1
 
@@ -125,7 +190,7 @@ class step():
                     for _ in range(len(self.p_up)):                 #判断是否是第(k+1)个up
                         if cache*self.p < pt*self.p_up[_]:
                             self.up[j][0][_]+=1
-                            self.up[j][2], self.up[j][3]=0,0
+                            self.up[j][3]=0
                             mg_b=False
                             break
                     if self.mg_type=="mg" and mg_b:
@@ -133,14 +198,13 @@ class step():
                             for _ in range(len(self.p_up)):
                                 if cache*self.p_up[-1] < pt*self.p_up[_]:
                                     self.up[j][0][_]+=1
-                                    self.up[j][2], self.up[j][3]=0,0
+                                    self.up[j][3]=0
                                     break
                         else:
-                            self.up[j][2]=0
                             self.up[j][3]+=1                        #非酋复活甲（大保底计数）
-                    else:
-                        self.up[j][2]=0
-                    if judge_exp(self.up[j][0],e):
+                    self.up[j][2]=0                                 #单轮计数清零
+                    
+                    if judge_exp(self.up[j][0],e):                  #达成期望结果
                         del self.up[j]
                     else:
                         self.up[j][1]+=1
@@ -167,58 +231,13 @@ class step():
 
         return eval('%.4f'%(1-len(self.up)/times))
         '''
-        up=dict()
-        
-        for i in range(times):                                  #新狗哥入场
-            insur=0                                             #非酋计数器（大保底计数器）
-            turn=t                                              #小保底计数器
-            s=0
-            count=[0 for i in range(self.ups)]                  #up计数器
-            for j in range(n):
-                turn+=1
-                pt=self.prob(turn)
-                cache=random.random()                           #抽卡！
-                if cache<pt:                                    #抽中五星
-                    mg_b=True
-                    for k in range(self.ups):                   #判断是否是第(k+1)个up
-                        if k<=cache*self.ups/pt/self.p_up<(k+1):
-                            count[k]+=1
-                            insur=0
-                            mg_b=False
-                            break
-                    if self.mg and mg_b:
-                        if insur==self.mg:                      #非酋的强运！（大保底）
-                            for k in range(self.ups):
-                                if (k+(self.ups-k)*self.p_up)<=cache*self.ups/pt<(k+1+(self.ups-k-1)*self.p_up):
-                                    count[k]+=1
-                                    break
-                            insur=0                             #大保底重置
-                        else:
-                            insur+=1                            #非酋复活甲（大保底激活）
-                            s+=1                                #歪计数器+1                          
-                    turn=0                                      #新轮回开始（保底计数器清零）
-                    
-                    if (not detail)and(sum(count)>=sum(e)):
-                        if judge_exp(count,e):
-                            break
-
-            count=tuple(count)
-            up[count]=up.get(count,0)+1
-
-        result=times
-        for key in up.keys():
-            if not judge_exp(key,e):
-                result-=up[key]
-
-        return eval('%.4f'%(result/times))
-        '''
 
     def clmp_n(self,e:list,target:float=0.95,lower=0,upper=None,fdis=None) -> int:
         '''
         返回达到预期e概率大于target概率的最小抽数n
         '''
         if upper==None:
-            upper=sum(e)*int((self.most if self.most>1 else self.thres+round((1-self.p)/self.most))/self.p_up)
+            upper=sum(e)*int(self.t95 / self.p_up[-1])
         if fdis==None:
             fdis=upper-lower
         n=int(lower+(upper-lower)*(target+0.5)/2)
@@ -236,8 +255,18 @@ class step():
     def calc_numpy(self, n:int, e:int, t:int=0):
         """
         仅限单up
+        
+        Parameters
+        ---
+        - n: 抽数
+        - e: 期望结果，以列表形式输入
+        - t: 距上次抽出最高稀有度角色的抽数，默认为0
+
+        Returns
+        ---
+        - 达到期望结果的概率
         """
-        upper = (self.most if self.most>1 else self.thres+round((1-self.p)/self.most)) if self.most else n
+        upper = self.t95 if self.most else n
         insur = self.mg if self.mg else n
 
         if e in self.result.keys():
@@ -278,23 +307,34 @@ class step():
     def calc_numpy_ups(self, n:int, e:list, wish:Optional[int]= None, t:int= 0):
         """
         多up版本
-        """
-        upper = (self.most if self.most>1 else self.thres+round((1-self.p)/self.most)) if self.most else n
-        insur = self.mg if self.mg else n
+        
+        Parameters
+        ---
+        - n: 抽数
+        - e: 期望结果，以列表形式输入
+        - t: 距上次抽出最高稀有度角色的抽数，默认为0
 
-        if tuple(e) in self.result.keys():
-            if n<len(self.p_list[tuple(e)]):
-                return sum(self.p_list[tuple(e)][:n+1])
+        Returns
+        ---
+        - 达到期望结果的概率
+        """
+        upper = self.t95 if self.most else n
+        insur = self.mg if self.mg else n
+        ee = tuple(e)
+
+        if ee in self.result.keys():
+            if n<len(self.p_list[ee]):
+                return sum(self.p_list[ee][:n+1])
             else:
-                start = len(self.p_list[tuple(e)])
-                cache = self.result[tuple(e)]
-                self.result[tuple(e)] = numpy.zeros((n+1, *[_+1 for _ in e], insur+1, upper+1))
-                self.result[tuple(e)][*[slice(_) for _ in cache.shape]] = cache
-                self.p_list[tuple(e)].extend([0 for _ in range(n+1-start)])
+                start = len(self.p_list[ee])
+                cache = self.result[ee]
+                self.result[ee] = numpy.zeros((n+1, *[_+1 for _ in e], insur+1, upper+1))
+                self.result[ee][*[slice(_) for _ in cache.shape]] = cache
+                self.p_list[ee].extend([0 for _ in range(n+1-start)])
         else:
-            self.result[tuple(e)] = numpy.zeros((n+1, *[_+1 for _ in e], insur+1, upper+1))
-            self.result[tuple(e)][0,*[0 for _ in range(len(e))],0,t] = 1
-            self.p_list[tuple(e)] = [0 for _ in range(n+1)]
+            self.result[ee] = numpy.zeros((n+1, *[_+1 for _ in e], insur+1, upper+1))
+            self.result[ee][0,*[0 for _ in range(len(e))],0,t] = 1
+            self.p_list[ee] = [0 for _ in range(n+1)]
             start = 1
 
         self.p1 = numpy.asarray([self.prob(_) for _ in range(1, upper+1)]).reshape(upper,1)
@@ -304,24 +344,24 @@ class step():
             for j in itertools.product(*[range(_+1) for _ in e]):
                 if not judge_exp(j,e):
                     for k in range(insur+1):
-                        rarest_p = numpy.dot(numpy.asarray([self.result[tuple(e)][i-1,*j,k,_] for _ in range(upper)]).reshape(1,upper), self.p1)
+                        rarest_p = numpy.dot(numpy.asarray([self.result[ee][i-1,*j,k,_] for _ in range(upper)]).reshape(1,upper), self.p1)
                         
                         for n in range(len(e)):
-                            self.result[tuple(e)][i,*[((j[_]+1) if ((_==n) and (j[_]<e[_])) else j[_]) for _ in range(len(e))],0,0] += (self.p_up[n] - (self.p_up[n-1] if n else 0)) * rarest_p / self.p
+                            self.result[ee][i,*[((j[_]+1) if ((_==n) and (j[_]<e[_])) else j[_]) for _ in range(len(e))],0,0] += (self.p_up[n] - (self.p_up[n-1] if n else 0)) * rarest_p / self.p
                         if k<insur:
-                            self.result[tuple(e)][i,*j,k+1,0] += (1 - self.p_up[-1] / self.p) * rarest_p
+                            self.result[ee][i,*j,k+1,0] += (1 - self.p_up[-1] / self.p) * rarest_p
                         else:
                             if wish:
-                                self.result[tuple(e)][i,*[((j[_]+1) if ((wish==_+1) and (j[_]<e[_])) else j[_]) for _ in range(len(e))],0,0] += (1 - self.p_up[-1] / self.p) * rarest_p
+                                self.result[ee][i,*[((j[_]+1) if ((wish==_+1) and (j[_]<e[_])) else j[_]) for _ in range(len(e))],0,0] += (1 - self.p_up[-1] / self.p) * rarest_p
                             else:
                                 for n in range(len(e)):
-                                    self.result[tuple(e)][i,*[(j[_]+1) if ((_==n) and (j[_]<e[_])) else j[_] for _ in range(len(e))],0,0] += (1 - self.p_up[-1] / self.p) * rarest_p / len(e)
+                                    self.result[ee][i,*[(j[_]+1) if ((_==n) and (j[_]<e[_])) else j[_] for _ in range(len(e))],0,0] += (1 - self.p_up[-1] / self.p) * rarest_p / len(e)
 
-                        self.result[tuple(e)][i,*j,k,1:] += self.p0 * self.result[tuple(e)][i-1,*j,k,:-1]
+                        self.result[ee][i,*j,k,1:] += self.p0 * self.result[ee][i-1,*j,k,:-1]
             
-            self.p_list[tuple(e)][i] = sum([self.result[tuple(e)][i,*e,_,0] for _ in range(insur+1)])
+            self.p_list[ee][i] = sum([self.result[ee][i,*e,_,0] for _ in range(insur+1)])
         
-        return sum(self.p_list[tuple(e)])
+        return sum(self.p_list[ee])
     
     #@running_time
     def calc(self,n:int,e:list,t:int=0,rel_exp:int=6) -> float:
@@ -432,46 +472,6 @@ class step():
         for i in sorted(self.up.keys()):
             print(i,self.up[i])
 
-class fixed():
-    def __init__(self,p,p_up,most,*args,**kwargs):
-        '''
-        p:最高稀有度出率
-        p_up:up角色出率
-        most:保底抽数, 0为无保底机制
-        '''
-        self.p=p
-        self.p_up=p_up
-        self.most=most
-
-    def smlt(self,n,e,times):
-        s=0
-        up=dict()
-        for i in range(times):
-            count=0
-            c=0
-            turn=0
-            for j in range(n):
-                turn+=1
-                cache=random.random()
-                if cache<self.p:
-                    if cache<self.p_up:
-                        count+=1
-                    else:
-                        s+=1
-            up[count]=up.get(count,0)+1
-        for i in range(e):
-            result-=up.get(i,0)
-        return eval('%.4f'%(result/times))
-
-    def prob(self,n,e):
-        if self.most and (n>=e*self.most):
-            return 1
-        else:
-            p=1
-            for i in range(e-math.floor(n/self.most)):
-                p-=((1-self.p_up)**(n-i))*(self.p_up**i)*math.comb(n,i)
-            return p
-
 class collection():
     def __init__(self,num,p=None,cost=None,value=None,*args,**kwargs):
         '''
@@ -532,6 +532,17 @@ class collection():
                 for i in range(len(self.level)):
                     for j in range(self.level[i]):
                         self.value.append(value[i])
+
+    def get_times(self, n:int) -> dict:
+        """
+        单一稀有度等级概率计算
+        """
+        base = {}
+        result = {}
+        for item_num in range(self.num):
+            base[item_num] = ((item_num+1)/self.num)**n - sum([math.comb(item_num+1, _+1) * base[_] for _ in range(item_num)])
+            result[item_num] = base[item_num] * math.comb(self.num, item_num+1)
+        return result
 
     #@running_time
     def smlt(self,n,res=None,rp=None,times=100000):
@@ -602,5 +613,5 @@ def prob_mrfz(n):
     else:
         return 0.02*n-0.98                          #0.02*(n-50)+0.02
 
-if __name__=='__main__':    
+if __name__=='__main__':
     pass

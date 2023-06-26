@@ -1,6 +1,8 @@
 import random
+import math
 import traceback
 import threading
+from typing import Optional
 
 from tkinter import *
 from tkinter import ttk
@@ -12,12 +14,12 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
-from gacha_type import step, fixed, collection
-from gacha_func import input2nlist, check_input, p_return
+from gacha_type import step, collection
+from gacha_func import input2nlist, check_input, p_return, details_report
 
 class Ui(Frame):
     
-    file="gacha_data.dll"
+    data_file="gacha_data.dll"
     label_font='Times\sNew\sRoman -14'
 
     def __init__(self,master=None,*args,**kwargs):
@@ -30,8 +32,7 @@ class Ui(Frame):
 
         mn=Menu(self.master)
         choosemn=Menu(mn,tearoff=False)
-        choosemn.add_command(label='概率递增卡池',command=self.createWidgets_step)
-        choosemn.add_command(label='固定概率卡池',command=self.createWidgets_fixed)
+        choosemn.add_command(label='常见及自定义卡池',command=self.createWidgets_step)
         choosemn.add_command(label='收藏品',command=self.createWidgets_collection)
         mn.add_cascade(label='卡池类型选择',menu=choosemn)
         helpmn=Menu(mn,tearoff=False)
@@ -67,7 +68,7 @@ class Ui(Frame):
             self.info.title('有关信息')
             self.info.geometry('320x240')
             self.info.lb1=Label(self.info,text='抽卡期望计算器')
-            self.info.lb2=Label(self.info,text='当前版本: 1.2.0 (ver20230608)')
+            self.info.lb2=Label(self.info,text='当前版本: 1.2.1 (ver20230626)')
             self.info.lb3=Label(self.info,text='Copyright by Dg_Han. All Rights Reserved.')
             self.info.lb4=Label(self.info,text='github: https://github.com/Dg-Han')
             self.info.lb1.pack()
@@ -89,7 +90,7 @@ class Ui(Frame):
         self.cmb.set('')
 
         label_list=['最高稀有度出率','up占最高稀有度总比例','up角色数量','触发概率递增机制抽数','递增至必出时抽数\n或 每抽递增概率','大保底歪几必出\n或 兑换up所需抽数\n0为无大保底机制',
-                    '总抽数','期望结果\n多up角色数量间用逗号分隔','未出最高稀有度角色抽数\n默认为0','期望结果概率\n默认为95%']
+                    '总抽数','期望结果\n多up角色数量间用逗号分隔','未出最高稀有度角色抽数\n默认为0','期望结果概率\n默认为95%','模拟次数']
 
         for i in range(6):
             self.lb=Label(self.master,text=label_list[i],font=self.label_font)
@@ -108,13 +109,13 @@ class Ui(Frame):
         self.ety5.place(relx=0.65,rely=0.35,relwidth=0.1,relheight=0.05)
         self.ety6.place(relx=0.8,rely=0.35,relwidth=0.1,relheight=0.05)
         self.ety1.bind('<KeyRelease>',self.check_step)
-        self.ety2.bind('<KeyRelease>',self.check_step)
+        self.ety2.bind('<FocusOut>',self.check_step)
         self.ety3.bind('<KeyRelease>',self.check_step)
         self.ety4.bind('<KeyRelease>',self.check_step)
         self.ety5.bind('<KeyRelease>',self.check_step)
         self.ety6.bind('<KeyRelease>',self.check_step)
 
-        for i in range(4):
+        for i in range(5):
             self.lb=Label(self.master,text=label_list[6+i],font=self.label_font)
             self.lb.place(relx=0.15*i+0.025,rely=0.45,relwidth=0.15,relheight=0.05)
 
@@ -122,26 +123,31 @@ class Ui(Frame):
         self.ety8=Entry(self.master)
         self.ety9=Entry(self.master)
         self.ety10=Entry(self.master)
+        self.ety11=Entry(self.master)
         self.ety7.place(relx=0.05,rely=0.525,relwidth=0.1,relheight=0.05)
         self.ety8.place(relx=0.2,rely=0.525,relwidth=0.1,relheight=0.05)
         self.ety9.place(relx=0.35,rely=0.525,relwidth=0.1,relheight=0.05)
         self.ety10.place(relx=0.5,rely=0.525,relwidth=0.1,relheight=0.05)
+        self.ety11.place(relx=0.65,rely=0.525,relwidth=0.1,relheight=0.05)
         self.ety7.bind('<KeyRelease>',self.check_step)
         self.ety8.bind('<FocusOut>',self.check_step)
         self.ety9.bind('<KeyRelease>',self.check_step)
         self.ety10.bind('<FocusOut>',self.check_step)
+        self.ety11.bind('<FocusOut>',self.check_step)
 
         self.btn1=Button(self.master,text='计算',font='Times\sNew\sRoman -20',command=lambda: threading.Thread(target=self.step_output,args=()).start())
-        self.btn1.place(relx=0.7,rely=0.5,relwidth=0.2,relheight=0.1)
-        self.btn2=Button(self.master,text='保存模板',command=lambda: self.save_step_model())
-        self.btn2.place(relx=0.85,rely=0.025,relwidth=0.1,relheight=0.05)
-        self.btn3=Button(self.master,text='删除模板',command=lambda: self.delete_step_model())
-        self.btn3.place(relx=0.85,rely=0.1,relwidth=0.1,relheight=0.05)
-        self.btn4=Button(self.master,text='分析卡池曲线',command=lambda: threading.Thread(target=self.analysis_set,args=()).start())
-        self.btn4.place(relx=0.85,rely=0.175,relwidth=0.1,relheight=0.05)
+        self.btn1.place(relx=0.775,rely=0.45,relwidth=0.175,relheight=0.1)
+        self.btn2=Button(self.master,text='计算 & 模拟', font='Times\sNew\sRoman -20', command=lambda: threading.Thread(target=self.step_output, args=([True])).start())
+        self.btn2.place(relx=0.775,rely=0.55,relwidth=0.175,relheight=0.1)
+        self.btn3=Button(self.master,text='保存模板',command=lambda: self.save_step_model())
+        self.btn3.place(relx=0.85,rely=0.025,relwidth=0.1,relheight=0.05)
+        self.btn4=Button(self.master,text='删除模板',command=lambda: self.delete_step_model())
+        self.btn4.place(relx=0.85,rely=0.1,relwidth=0.1,relheight=0.05)
+        self.btn5=Button(self.master,text='分析卡池曲线',command=lambda: threading.Thread(target=self.analysis_set,args=()).start())
+        self.btn5.place(relx=0.85,rely=0.175,relwidth=0.1,relheight=0.05)
 
         self.lb11=Label(self.master,text='',font='Times\sNew\sRoman -18')
-        self.lb11.place(relx=0.25,rely=0.75,relwidth=0.5,relheight=0.1)
+        self.lb11.place(relx=0.1,rely=0.7,relwidth=0.8,relheight=0.2)
         
     def set_step_para(self,event=None):
         self.ety1.config(state='normal')
@@ -172,13 +178,19 @@ class Ui(Frame):
         else:
             self.cmb.config(state='normal')
 
+        self.ety11.insert(END,"1")
         self.lb11.config(text='')
 
-    def step_output(self):
+    def step_output(self, smlt:Optional[bool]= None):
         try:
             p=eval(self.ety1.get())
-            p_up=eval(self.ety2.get())
+            if self.ety2.get()[0] == "[":
+                p_up = input2nlist(self.ety2.get()[1:-1])
+            else:
+                p_up=eval(self.ety2.get())
             ups=eval(self.ety3.get())
+            if not ups:
+                ups = None
             thres=eval(self.ety4.get())
             most=eval(self.ety5.get())
             mg=eval(self.ety6.get())
@@ -199,23 +211,29 @@ class Ui(Frame):
                 target=0.95
             
             para_set=step(p,p_up,ups,thres,most,mg)
+            if smlt:
+                times = eval(self.ety11.get())
+                smlt_result = para_set.smlt(n,e,t,times=times)
+                smlt_report = details_report(smlt_result)
             self.lb11.config(text='计算中...')
-            result=para_set.calc_numpy(n,*e,t) if ups==1 else para_set.calc_numpy_ups(n,e,t)
+            result=para_set.calc_numpy(n,*e,t) if para_set.ups==1 else para_set.calc_numpy_ups(n,e,t)
             self.lb11.config(text='计算中... 计算进度 %.2f %%'%(10+10*random.random()))
             self.update()
             #nx=step(p,p_up,ups,thres,most,mg).clmp_n(e,target)
             lower=0
-            upper=sum(e)*int((most if most>1 else thres+round((1-p)/most))/p_up)*ups
+            upper=sum(e)*int(para_set.t95 * p / para_set.p_up[-1])*para_set.ups
             fdis=upper-lower
             while True:
                 n=int(lower+(upper-lower)*(target+0.5)/2)
-                p1=para_set.calc_numpy(n,*e) if ups==1 else para_set.calc_numpy_ups(n,e)
-                p2=para_set.calc_numpy(n+1,*e) if ups==1 else para_set.calc_numpy_ups(n+1,e)
+                p1=para_set.calc_numpy(n,*e) if para_set.ups==1 else para_set.calc_numpy_ups(n,e)
+                p2=para_set.calc_numpy(n+1,*e) if para_set.ups==1 else para_set.calc_numpy_ups(n+1,e)
                 #print(lower,upper,n,p1,p2)
                 if p1<target<=p2:
                     nx=n+1
                     break
                 elif p2<target:
+                    if lower==n:
+                        upper += 10
                     lower=n
                     self.lb11.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
                     self.update()
@@ -224,7 +242,10 @@ class Ui(Frame):
                     self.lb11.config(text='计算中... 计算进度 %.2f %%'%(100*(1-(upper-lower)/fdis)))
                     self.update()
                     
-            self.lb11.config(text='达到预期抽卡结果的概率是 %.2f %%\n%s\n达到 %d%% 出率的所需抽数为 %d'%(100*result,p_return(result),int(100*target),nx))
+            if smlt:
+                self.lb11.config(text=f'达到预期抽卡结果的概率是 {100*result:.2f} %\n{p_return(result, bool(smlt_report["datas"]["smlt_success"]))}\n达到 {int(100*target)}% 出率的所需抽数为 {nx}\n模拟抽卡结果为{smlt_report["ups"]}\n{smlt_report["expect"] if times>1 and smlt_report["expect"] else ""}{smlt_report["turns"] if smlt_report["turns"] else ""}')
+            else:
+                self.lb11.config(text=f'达到预期抽卡结果的概率是 {100*result:.2f} %\n{p_return(result)}\n达到 {int(100*target)}% 出率的所需抽数为 {nx}\n')
             
         except SyntaxError:
             self.lb11.config(text='')
@@ -246,7 +267,7 @@ class Ui(Frame):
                 self.ety1.delete(len(self.ety1.get())-1,END)
         if self.ety2.get():
             try:
-                if not check_input(self.ety2.get(),'p'):
+                if (not (self.ety2[0]=="[" and input2nlist(self.ety2.get()[1:-1]))) and (not check_input(self.ety2.get(),'p')):
                     self.ety2.delete(0,END)
             except:
                 self.ety2.delete(len(self.ety2.get())-1,END)
@@ -284,7 +305,8 @@ class Ui(Frame):
             try:
                 list=input2nlist(self.ety8.get())
                 if len(list)!=eval(self.ety3.get()):
-                    showwarning('Warning','输入期望数量与up角色数量不符！')
+                    if not(eval(self.ety3.get())) and len(list)!=len(input2nlist(self.ety2.get()[1:-1])):
+                        showwarning('Warning','输入期望数量与up角色数量不符！')
             except:
                 pass
         if self.ety9.get():
@@ -301,13 +323,19 @@ class Ui(Frame):
             except:
                 showerror('Error','数据类型错误！请输入百分比或概率')
                 self.ety10.delete(0,END)
+        if self.ety11.get():
+            try:
+                if not check_input(self.ety11.get(),'N'):
+                    self.ety11.delete(len(self.ety11.get())-1, END)
+            except:
+                self.ety11.delete(len(self.ety11.get())-1, END)
 
     def save_step_model(self):
         if self.cmb.get() in self.step_model.keys():
             showwarning('Warning','保存模板名称与已有模板重复！')
         else:
             if self.cmb.get() and self.ety1.get() and self.ety2.get() and self.ety3.get() and self.ety4.get() and self.ety5.get() and self.ety6.get():
-                with open(self.file,'a',encoding='utf-8') as f:
+                with open(self.data_file,'a',encoding='utf-8') as f:
                     f.write(','.join(['step',self.cmb.get(),
                                       self.ety1.get(),
                                       self.ety2.get(),
@@ -331,9 +359,9 @@ class Ui(Frame):
         elif self.cmb.get() in ['原神','明日方舟单up','明日方舟双up']:
             showwarning('Warning','初始模板不可删除！')
         else:                                               #self.cmb.get() in step_model.keys()
-            with open(self.file,'r',encoding='utf-8') as f:
+            with open(self.data_file,'r',encoding='utf-8') as f:
                 lines=f.readlines()
-            with open(self.file,'w',encoding='utf-8') as f:
+            with open(self.data_file,'w',encoding='utf-8') as f:
                 for line in lines:
                     if self.cmb.get() not in line:
                         f.write(line)
@@ -406,8 +434,13 @@ class Ui(Frame):
     def analysis_step(self,e_list):
         try:
             p=eval(self.ety1.get())
-            p_up=eval(self.ety2.get())
+            if self.ety2.get()[0] == "[":
+                p_up = input2nlist(self.ety2.get()[1:-1])
+            else:
+                p_up=eval(self.ety2.get())
             ups=eval(self.ety3.get())
+            if not ups:
+                ups= len(p_up)
             thres=eval(self.ety4.get())
             most=eval(self.ety5.get())
             mg=eval(self.ety6.get())
@@ -425,8 +458,7 @@ class Ui(Frame):
             plt.title('抽卡概率曲线')
             
             for e in e_list:
-                up_result=dict()
-                para_set=step(p,p_up,ups,thres,most,mg,up_result=up_result)
+                para_set=step(p,p_up,ups,thres,most,mg)
                 n=0
                 if para_set.mg_type=='exc':
                     upper=mg*max(e)*1.05
@@ -435,17 +467,16 @@ class Ui(Frame):
                 while n<upper:
                     n+=1
                     if ups==1:
-                        para_set.calc(n,e)
+                        para_set.calc_numpy(n,*e)
                         self.update()
                     else:
-                        para_set.smlt(n,e)
+                        para_set.calc_numpy_ups(n,e)
                         self.update()
-                up_result[tuple([tuple(e),0])]=0
                 x_list=[]
                 y_list=[]
-                for i in sorted([_[1] for _ in up_result.keys()]):
+                for i in range(int(upper)):
                     x_list.append(i)
-                    y_list.append(up_result[tuple([tuple(e),i])])
+                    y_list.append(sum(para_set.p_list[e[0] if ups==1 else tuple(e)][:i+1]))
                 
                 plt.plot(x_list,y_list,label=','.join([str(e[_])+'up'+('' if len(e)==1 else chr(ord('A')+_)) for _ in range(len(e))]))
 
@@ -461,166 +492,6 @@ class Ui(Frame):
         except:
             traceback.print_exc()
             showerror('Error','未知错误！')
-
-    def createWidgets_fixed(self):
-        for widget in self.master.winfo_children():
-            if (widget.winfo_class()!='Frame')and(widget.winfo_class()!='Menu'):
-                widget.destroy()
-
-        self.cmb=ttk.Combobox(self.master, textvariable=self.mode, state='readonly')
-        name_list=self.fixed_cmb_value()
-        self.cmb['value']=name_list
-        self.cmb.bind('<<ComboboxSelected>>', self.set_fixed_para)
-        self.cmb.place(relx=0.7,rely=0.1,relwidth=0.1,relheight=0.05)
-        self.cmb.set('')
-
-        self.lb1=Label(self.master,text='最高稀有度出率',font=self.label_font)
-        self.lb2=Label(self.master,text='up角色出率',font=self.label_font)
-        self.lb3=Label(self.master,text='保底抽数\n0为无保底机制',font=self.label_font)
-        self.lb1.place(relx=0.1,rely=0.25,relwidth=0.1,relheight=0.05)
-        self.lb2.place(relx=0.3,rely=0.25,relwidth=0.1,relheight=0.05)
-        self.lb3.place(relx=0.45,rely=0.25,relwidth=0.2,relheight=0.05)
-
-        self.ety1=Entry(self.master)
-        self.ety2=Entry(self.master)
-        self.ety3=Entry(self.master)
-        self.ety1.place(relx=0.1,rely=0.325,relwidth=0.1,relheight=0.05)
-        self.ety2.place(relx=0.3,rely=0.325,relwidth=0.1,relheight=0.05)
-        self.ety3.place(relx=0.5,rely=0.325,relwidth=0.1,relheight=0.05)
-        self.ety1.bind('<KeyRelease>',self.check_fixed)
-        self.ety2.bind('<KeyRelease>',self.check_fixed)
-        self.ety3.bind('<KeyRelease>',self.check_fixed)
-
-        self.lb4=Label(self.master,text='总抽数',font=self.label_font)
-        self.lb5=Label(self.master,text='期望结果',font=self.label_font)
-        self.lb4.place(relx=0.2,rely=0.45,relwidth=0.1,relheight=0.05)
-        self.lb5.place(relx=0.4,rely=0.45,relwidth=0.1,relheight=0.05)
-        self.ety4=Entry(self.master)
-        self.ety5=Entry(self.master)
-        self.ety4.place(relx=0.2,rely=0.525,relwidth=0.1,relheight=0.05)
-        self.ety5.place(relx=0.4,rely=0.525,relwidth=0.1,relheight=0.05)
-        self.ety4.bind('<KeyRelease>',self.check_fixed)
-        self.ety5.bind('<KeyRelease>',self.check_fixed)
-
-        self.lb6=Label(self.master,text='',font='Times\sNew\sRoman -18')
-        self.lb6.place(relx=0.25,rely=0.75,relwidth=0.5,relheight=0.1)
-
-        self.btn1=Button(self.master,text='计算',command=lambda: self.fixed_output(),font='Times\sNew\sRoman -20')
-        self.btn1.place(relx=0.7,rely=0.5,relwidth=0.2,relheight=0.1)
-        self.btn2=Button(self.master,text='保存模板',command=lambda: self.save_fixed_model())
-        self.btn2.place(relx=0.85,rely=0.0625,relwidth=0.1,relheight=0.05)
-        self.btn3=Button(self.master,text='删除模板',command=lambda: self.delete_fixed_model())
-        self.btn3.place(relx=0.85,rely=0.1375,relwidth=0.1,relheight=0.05)
-
-    def set_fixed_para(self,event=None):
-        self.ety1.config(state='normal')
-        self.ety2.config(state='normal')
-        self.ety3.config(state='normal')
-
-        for widget in self.master.winfo_children():
-            if widget.winfo_class()=='Entry':
-                widget.delete(0,END)
-
-        m=self.mode.get()
-        if m in self.fixed_model.keys():
-            self.ety1.insert(END,str(self.fixed_model[m][0]))
-            self.ety1.config(state='readonly')
-            self.ety2.insert(END,str(self.fixed_model[m][1]))
-            self.ety2.config(state='readonly')
-            self.ety3.insert(END,str(self.fixed_model[m][2]))
-            self.ety3.config(state='readonly')
-            self.cmb.config(state='readonly')
-        else:
-            self.cmb.config(state='normal')
-
-    def check_fixed(self,event):
-        if self.ety1.get():
-            try:
-                if not check_input(self.ety1.get(),'p'):
-                    self.ety1.delete(0,END)
-            except:
-                self.ety1.delete(len(self.ety1.get())-1,END)
-        if self.ety2.get():
-            try:
-                if not check_input(self.ety2.get(),'p'):
-                    self.ety2.delete(0,END)
-            except:
-                self.ety2.delete(len(self.ety2.get())-1,END)
-        if self.ety3.get():
-            try:
-                if not check_input(self.ety3.get(),'N'):
-                    self.ety3.delete(len(self.ety3.get())-1,END)
-            except:
-                self.ety3.delete(len(self.ety3.get())-1,END)
-        if self.ety4.get():
-            try:
-                if not check_input(self.ety4.get(),'N'):
-                    self.ety4.delete(len(self.ety4.get())-1,END)
-            except:
-                self.ety4.delete(len(self.ety4.get())-1,END)
-        if self.ety5.get():
-            try:
-                if not check_input(self.ety5.get(),'N'):
-                    self.ety5.delete(len(self.ety5.get())-1,END)
-            except:
-                self.ety5.delete(len(self.ety5.get())-1,END)
-
-    def fixed_output(self):
-        try:
-            p=eval(self.ety1.get())
-            p_up=eval(self.ety2.get())
-            most=eval(self.ety3.get())
-            n=eval(self.ety4.get())
-            e=eval(self.ety5.get())
-            self.lb6.config(text='达到预期抽卡结果的概率是 %.2f %%'%(100*fixed(p,p_up,most).prob(n,e)))
-        except:
-            showerror('Error','存在参数值输入错误！')
-
-    def save_fixed_model(self):
-        if self.cmb.get() in self.fixed_model.keys():
-            showwarning('Warning','保存模板名称与已有模板重复！')
-        else:
-            if self.cmb.get() and self.ety1.get() and self.ety2.get() and self.ety3.get():
-                with open(self.file,'a',encoding='utf-8') as f:
-                    f.write(','.join(['fixed',self.cmb.get(),
-                                      self.ety1.get(),
-                                      self.ety2.get(),
-                                      self.ety3.get()]))
-                    f.write('\n')
-                self.fixed_model[self.cmb.get()]=[self.ety1.get(),self.ety2.get(),self.ety3.get()]
-                
-                name_list=self.fixed_cmb_value()
-                self.cmb['value']=name_list
-                self.cmb.current(len(name_list)-2)
-                self.set_fixed_para()
-            else:
-                showwarning('Warning','存在卡池参数值为空！')
-
-    def delete_fixed_model(self):
-        if self.cmb.get() not in self.fixed_model.keys():
-            showerror('Error','无已有模板！')
-        elif self.cmb.get() in ['PCR','blhx']:
-            showwarning('Warning','初始模板不可删除！')
-        else:                                               #self.cmb.get() in fixed_model.keys()
-            with open(self.file,'r',encoding='utf-8') as f:
-                lines=f.readlines()
-            with open(self.file,'w',encoding='utf-8') as f:
-                for line in lines:
-                    if self.cmb.get() not in line:
-                        f.write(line)
-            del self.fixed_model[self.cmb.get()]
-
-            name_list=self.fixed_cmb_value()
-            self.cmb['value']=name_list
-            self.cmb.set('')
-            self.set_fixed_para()
-
-    def fixed_cmb_value(self):
-        
-        cache=[item for item in self.fixed_model.keys()]
-        cache.append('自定义')
-        name_list=tuple(cache)
-        return name_list
 
     def createWidgets_collection(self):
         for widget in self.master.winfo_children():
